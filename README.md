@@ -69,11 +69,11 @@ Este script realiza:
 
 - Python 3.x
 - Bibliotecas:
-
 ```bash
 pip install pandas matplotlib
+```
 
-## 👨‍💻 Autores
+### 👨‍💻 Autores
 
 - Arienne Alves Navarro
 - Thales Rodrigues Resende
