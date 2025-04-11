@@ -39,7 +39,7 @@ public:
             linha = limparEspacos(linha);
             if (linha.empty()) continue;
             if (linha.find("#Nodes:") != string::npos) {
-                stringstream ss(linha.substr(8)); // Pula "#Nodes:"
+                stringstream ss(linha.substr(8));
                 ss >> numVertices;
                 matrizAdj.assign(numVertices + 1, vector<int>(numVertices + 1, 0));
             } else if (linha.find("ReN.") != string::npos) {
@@ -60,7 +60,7 @@ public:
                         arestas.push_back({from, to});
                         arestasRequeridas.insert({from, to});
                         arestasRequeridas.insert({to, from});
-                        matrizAdj[from][to] = 2; // Aresta requerida
+                        matrizAdj[from][to] = 2;
                         matrizAdj[to][from] = 2;
                     } else {
                         cerr << "Aresta requerida ignorada por ter vértices inválidos: " << from << " -> " << to << endl;
@@ -75,7 +75,7 @@ public:
                     if (from >= 1 && from <= numVertices && to >= 1 && to <= numVertices) {
                         arcos.push_back({from, to});
                         arcosRequeridos.insert({from, to});
-                        matrizAdj[from][to] = 1; // Arco requerido
+                        matrizAdj[from][to] = 1;
                     } else {
                         cerr << "Arco requerido ignorado por ter vértices inválidos: " << from << " -> " << to << endl;
                     }
@@ -87,7 +87,7 @@ public:
                     int id, from, to, custoTotal;
                     sscanf(linha.c_str(), "NrE%d %d %d %d", &id, &from, &to, &custoTotal);
                     if (from >= 1 && from <= numVertices && to >= 1 && to <= numVertices) {
-                        matrizAdj[from][to] = 2; // Aresta opcional
+                        matrizAdj[from][to] = 2;
                         matrizAdj[to][from] = 2;
                     } else {
                         cerr << "Aresta opcional ignorada por ter vértices inválidos: " << from << " -> " << to << endl;
@@ -100,7 +100,7 @@ public:
                     int id, from, to, custoTotal;
                     sscanf(linha.c_str(), "NrA%d %d %d %d", &id, &from, &to, &custoTotal);
                     if (from >= 1 && from <= numVertices && to >= 1 && to <= numVertices) {
-                        matrizAdj[from][to] = 1; // Arco opcional
+                        matrizAdj[from][to] = 1;
                     } else {
                         cerr << "Arco opcional ignorado por ter vértices inválidos: " << from << " -> " << to << endl;
                     }
@@ -202,8 +202,7 @@ public:
     void calcularCaminhosMinimos() {
         dist.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
         pred.assign(numVertices + 1, vector<int>(numVertices + 1, -1));
-
-        // Inicializa distâncias
+        //Inicializa distancias
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
                 if (i == j) {
@@ -215,7 +214,6 @@ public:
                 }
             }
         }
-
         // Floyd-Warshall
         for (int k = 1; k <= numVertices; ++k) {
             for (int i = 1; i <= numVertices; ++i) {
@@ -228,11 +226,48 @@ public:
             }
         }
     }
+
+    void calcularCaminhoMedio() {
+        ofstream resultados("resultados.csv", ios::app);
+        int soma = 0;
+        int contagem = 0;
+        for (int i = 1; i <= numVertices; ++i) {
+            for (int j = 1; j <= numVertices; ++j) {
+                if (i != j && dist[i][j] != INF) {
+                    soma += dist[i][j];
+                    contagem++;
+                }
+            }
+        }
+        if (contagem == 0) {
+            resultados << "Caminho medio,Nao ha caminhos entre pares de vertices." << endl;
+        } else {
+            double caminhoMedio = static_cast<double>(soma) / contagem;
+            resultados << "Caminho medio," << fixed << setprecision(2) << caminhoMedio << endl;
+        }
+        resultados.close();
+    }
+
+    void calcularDiametro() {
+        ofstream resultados("resultados.csv", ios::app);
+        int diametro = 0;
+        for (int i = 1; i <= numVertices; ++i) {
+            for (int j = 1; j <= numVertices; ++j) {
+                if (i != j && dist[i][j] != INF) {
+                    diametro = max(diametro, dist[i][j]);
+                }
+            }
+        }
+        resultados << "Diametro do grafo," << diametro << endl;
+        resultados.close();
+    }
 };
 
 int main() {
     Grafo g("Caminho ate a instancia");
     g.salvarEstatisticas();
     g.calcularCaminhosMinimos();
+    g.calcularCaminhoMedio();
+    g.calcularDiametro();
     return 0;
 }
