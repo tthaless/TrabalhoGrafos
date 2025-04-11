@@ -127,11 +127,40 @@ public:
         }
         return total;
     }
+
+    double calcularDensidade() {
+        int totalConexoes = contarArestas() * 2 + contarArcos();
+        double maxConexoes = numVertices * (numVertices - 1);
+        return totalConexoes / maxConexoes;
+    }
+
+    void dfs(int v, vector<bool>& visitado) {
+        visitado[v] = true;
+        for (int i = 1; i <= numVertices; ++i) {
+            if (!visitado[i] && (matrizAdj[v][i] > 0 || matrizAdj[i][v] > 0)) {
+                dfs(i, visitado);
+            }
+        }
+    }
+
+    int contarComponentesConexos() {
+        vector<bool> visitado(numVertices + 1, false);
+        int componentes = 0;
+        for (int i = 1; i <= numVertices; ++i) {
+            if (!visitado[i]) {
+                dfs(i, visitado);
+                componentes++;
+            }
+        }
+        return componentes;
+    }
 };
 
 int main() {
-    Grafo g("Caminho ate a instacia");
+    Grafo g("Caminho ate a instancia");
     cout << "Numero de arestas: " << g.contarArestas() << endl;
     cout << "Numero de arcos: " << g.contarArcos() << endl;
+    cout << "Densidade do grafo: " << g.calcularDensidade() << endl;
+    cout << "Componentes conexos: " << g.contarComponentesConexos() << endl;
     return 0;
 }
