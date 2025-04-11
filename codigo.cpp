@@ -154,13 +154,52 @@ public:
         }
         return componentes;
     }
+
+    void salvarEstatisticas() {
+        ofstream resultados("resultados.csv");
+        resultados << "Metrica,Valor" << endl;
+       
+        resultados << "Numero total de vertices," << numVertices << endl;
+        resultados << "Numero total de arestas," << contarArestas() << endl;
+        resultados << "Numero total de arcos," << contarArcos() << endl;
+        resultados << "Numero de vertices requeridos," << verticesRequeridos.size() << endl;
+        resultados << "Numero de arestas requeridas," << arestasRequeridas.size() / 2 << endl;
+        resultados << "Numero de arcos requeridos," << arcosRequeridos.size() << endl;
+        resultados << "Densidade do grafo," << calcularDensidade() << endl;
+        resultados << "Componentes conexos," << contarComponentesConexos() << endl;
+        resultados << "Grau minimo," << calcularGrauMinimo() << endl;
+        resultados << "Grau maximo," << calcularGrauMaximo() << endl;
+
+        resultados.close();
+    }
+
+    int calcularGrauMinimo() {
+        int min_grau = INF;
+        for(int i = 1; i <= numVertices; i++) {
+            int grau = 0;
+            for(int j = 1; j <= numVertices; j++) {
+                if(matrizAdj[i][j] != 0) grau++;
+            }
+            min_grau = min(min_grau, grau);
+        }
+        return min_grau;
+    }
+   
+    int calcularGrauMaximo() {
+        int max_grau = 0;
+        for(int i = 1; i <= numVertices; i++) {
+            int grau = 0;
+            for(int j = 1; j <= numVertices; j++) {
+                if(matrizAdj[i][j] != 0) grau++;
+            }
+            max_grau = max(max_grau, grau);
+        }
+        return max_grau;
+    }
 };
 
 int main() {
     Grafo g("Caminho ate a instancia");
-    cout << "Numero de arestas: " << g.contarArestas() << endl;
-    cout << "Numero de arcos: " << g.contarArcos() << endl;
-    cout << "Densidade do grafo: " << g.calcularDensidade() << endl;
-    cout << "Componentes conexos: " << g.contarComponentesConexos() << endl;
+    g.salvarEstatisticas();
     return 0;
 }
