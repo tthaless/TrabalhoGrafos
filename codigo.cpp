@@ -202,7 +202,7 @@ public:
     void calcularCaminhosMinimos() {
         dist.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
         pred.assign(numVertices + 1, vector<int>(numVertices + 1, -1));
-        //Inicializa distancias
+
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
                 if (i == j) {
@@ -214,7 +214,7 @@ public:
                 }
             }
         }
-        // Floyd-Warshall
+
         for (int k = 1; k <= numVertices; ++k) {
             for (int i = 1; i <= numVertices; ++i) {
                 for (int j = 1; j <= numVertices; ++j) {
@@ -261,6 +261,45 @@ public:
         resultados << "Diametro do grafo," << diametro << endl;
         resultados.close();
     }
+
+    void calcularIntermediacao() {
+        ofstream resultados("resultados.csv", ios::app);
+        vector<double> intermediacao(numVertices + 1, 0.0);
+       
+        for (int s = 1; s <= numVertices; ++s) {
+            for (int t = 1; t <= numVertices; ++t) {
+                if (s != t && dist[s][t] != INF) {
+                    int atual = t;
+                    vector<int> caminho;
+   
+                    while (atual != -1 && atual != s) {
+                        caminho.push_back(atual);
+                        atual = pred[s][atual];
+                    }
+   
+                    if (atual == s) {
+                        caminho.push_back(s);
+   
+                        for (size_t i = 1; i < caminho.size() - 1; ++i) {
+                            intermediacao[caminho[i]] += 1.0;
+                        }
+                    }
+                }
+            }
+        }
+   
+        double totalPares = (double)(numVertices * (numVertices - 1)) / 2.0;
+   
+        for (int v = 1; v <= numVertices; ++v) {
+            intermediacao[v] /= totalPares;
+        }
+   
+        resultados << "Intermediacao dos vertices (normalizada):" << endl;
+        for (int v = 1; v <= numVertices; ++v) {
+            resultados << "Vertice " << v << "," << fixed << setprecision(4) << intermediacao[v] << endl;
+        }
+        resultados.close();
+    }
 };
 
 int main() {
@@ -269,5 +308,6 @@ int main() {
     g.calcularCaminhosMinimos();
     g.calcularCaminhoMedio();
     g.calcularDiametro();
+    g.calcularIntermediacao();
     return 0;
 }
