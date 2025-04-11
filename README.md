@@ -1,4 +1,4 @@
-# Trabalho Prãtico de Grafos com C++ e Visualização em Python
+# Trabalho Prático de Grafos com C++ e Visualização em Python
 
 Este projeto realiza a leitura, processamento e análise de grafos a partir de arquivos `.dat`, utilizando C++ para o processamento e Python para visualização dos resultados.
 
@@ -75,7 +75,7 @@ Este script realiza:
 pip install pandas matplotlib
 ```
 
-### 👨‍💻 Autores
+## 👨‍💻 Autores
 
 - Arienne Alves Navarro
 - Thales Rodrigues Resende
