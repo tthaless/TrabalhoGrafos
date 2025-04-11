@@ -18,6 +18,8 @@ private:
     vector<pair<int, int>> arcos;
     set<pair<int, int>> arestasRequeridas;
     set<pair<int, int>> arcosRequeridos;
+    vector<vector<int>> dist;
+    vector<vector<int>> pred;
 
     string limparEspacos(const string& s) {
         size_t inicio = s.find_first_not_of(" \t\r");
@@ -196,10 +198,41 @@ public:
         }
         return max_grau;
     }
+
+    void calcularCaminhosMinimos() {
+        dist.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
+        pred.assign(numVertices + 1, vector<int>(numVertices + 1, -1));
+
+        // Inicializa distâncias
+        for (int i = 1; i <= numVertices; ++i) {
+            for (int j = 1; j <= numVertices; ++j) {
+                if (i == j) {
+                    dist[i][j] = 0;
+                    pred[i][j] = i;
+                } else if (matrizAdj[i][j] > 0) {
+                    dist[i][j] = 1;
+                    pred[i][j] = i;
+                }
+            }
+        }
+
+        // Floyd-Warshall
+        for (int k = 1; k <= numVertices; ++k) {
+            for (int i = 1; i <= numVertices; ++i) {
+                for (int j = 1; j <= numVertices; ++j) {
+                    if (dist[i][k] + dist[k][j] < dist[i][j]) {
+                        dist[i][j] = dist[i][k] + dist[k][j];
+                        pred[i][j] = pred[k][j];
+                    }
+                }
+            }
+        }
+    }
 };
 
 int main() {
     Grafo g("Caminho ate a instancia");
     g.salvarEstatisticas();
+    g.calcularCaminhosMinimos();
     return 0;
 }
