@@ -19,7 +19,7 @@ Este projeto realiza a leitura, processamento e análise de grafos a partir de a
 
 ## 🧠 Funcionalidades
 
-### 🧩 Parte C++ (`grafo.cpp`)
+### 🧩 Parte C++ (`codigo.cpp`)
 
 O programa realiza as seguintes operações:
 
@@ -43,7 +43,7 @@ O programa realiza as seguintes operações:
 
 ---
 
-### 📊 Parte Python (`visualizar_resultados.py`)
+### 📊 Parte Python (`visualizacao.ipynb`)
 
 Este script realiza:
 
