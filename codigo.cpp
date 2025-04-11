@@ -108,7 +108,30 @@ public:
         arquivo.close();
     }
 
+    int contarArestas() {
+        int total = 0;
+        for (int i = 1; i <= numVertices; ++i) {
+            for (int j = i + 1; j <= numVertices; ++j) {
+                if (matrizAdj[i][j] == 2) total++;
+            }
+        }
+        return total;
+    }
+
+    int contarArcos() {
+        int total = 0;
+        for (int i = 1; i <= numVertices; ++i) {
+            for (int j = 1; j <= numVertices; ++j) {
+                if (matrizAdj[i][j] == 1) total++;
+            }
+        }
+        return total;
+    }
+};
+
 int main() {
-    Grafo g("Caminho ate a instancia");
+    Grafo g("Caminho ate a instacia");
+    cout << "Numero de arestas: " << g.contarArestas() << endl;
+    cout << "Numero de arcos: " << g.contarArcos() << endl;
     return 0;
 }
