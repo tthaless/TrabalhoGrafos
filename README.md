@@ -4,7 +4,8 @@ Este projeto realiza a leitura, processamento e análise de grafos a partir de a
 
 ## 📁 Estrutura do Projeto
 
-## 📂 projeto/ 
+```
+ 📂 projeto/ 
 ├── codigo.cpp # Código principal em C++ 
 ├── visualizacao.ipynb # Visualização do código principal
 ├── output # Saída para executável e CSV
@@ -12,6 +13,7 @@ Este projeto realiza a leitura, processamento e análise de grafos a partir de a
 |    └── resultados.csv
 ├── README.md
 └── instancias # todas as instâncias para testes
+```
 
 ---
 
