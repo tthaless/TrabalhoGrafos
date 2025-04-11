@@ -6,13 +6,13 @@ Este projeto realiza a leitura, processamento e análise de grafos a partir de a
 
 ```
  📂 projeto/ 
-├── codigo.cpp # Código principal em C++ 
-├── visualizacao.ipynb # Visualização do código principal
+├── instancias # todas as instâncias para testes 
 ├── output # Saída para executável e CSV
 |    └── codigo.exe 
 |    └── resultados.csv
 ├── README.md
-└── instancias # todas as instâncias para testes
+├── codigo.cpp # Código principal em C++
+└── visualizacao.ipynb # Visualização do código principal
 ```
 
 ---
