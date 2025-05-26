@@ -5,7 +5,7 @@
 #include <set>
 #include <string>
 #include <iomanip>
-#include <algorithm> // Para std::min e std::max
+#include <algorithm> 
 
 using namespace std;
 
@@ -274,31 +274,34 @@ public:
         return componentes;
     }
 
-    // Calcula caminhos mínimos usando custo unitário 
-    void calcularCaminhosMinimos() { 
+    // Calcula caminhos mínimos usando os custos reais das arestas/arcos
+    void calcularCaminhosMinimosComCustos() {
+        if (numVertices == 0) return; // Não faz nada se não há vértices
         dist.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
         pred.assign(numVertices + 1, vector<int>(numVertices + 1, -1));
 
-        for (int i = 1; i <= numVertices; ++i) {
-            for (int j = 1; j <= numVertices; ++j) {
+        // Inicializa distâncias diretas a partir da matriz de custosDiretos
+        for (int i = 0; i <= numVertices; ++i) { // Iterar de 0 a numVertices para incluir o depósito se for 0
+            for (int j = 0; j <= numVertices; ++j) {
                 if (i == j) {
                     dist[i][j] = 0;
                     pred[i][j] = i;
-                } else if (matrizAdj[i][j] > 0) { 
-                    dist[i][j] = 1; 
+                } else if (i > 0 && j > 0 && i <= numVertices && j <= numVertices && custosDiretos[i][j] != INF) {
+                    dist[i][j] = custosDiretos[i][j]; 
                     pred[i][j] = i;
                 }
             }
         }
 
-        for (int k = 1; k <= numVertices; ++k) {
-            for (int i = 1; i <= numVertices; ++i) {
-                for (int j = 1; j <= numVertices; ++j) {
-                    if (dist[i][k] != INF && dist[k][j] != INF) {
-                        if (dist[i][k] + dist[k][j] < dist[i][j]) {
-                            dist[i][j] = dist[i][k] + dist[k][j];
-                            pred[i][j] = pred[k][j];
-                        }
+        // Algoritmo de Floyd-Warshall
+        for (int k = 0; k <= numVertices; ++k) { // Nó intermediário
+            for (int i = 0; i <= numVertices; ++i) { // Nó de origem
+                for (int j = 0; j <= numVertices; ++j) { // Nó de destino
+                    // Verifica se os caminhos parciais não são INF para evitar overflow e garantir que a soma é válida
+                    if (dist[i][k] != INF && dist[k][j] != INF &&
+                        (static_cast<long long>(dist[i][k]) + dist[k][j] < dist[i][j])) { // long long pra evitar overflow na soma
+                        dist[i][j] = dist[i][k] + dist[k][j];
+                        pred[i][j] = pred[k][j]; 
                     }
                 }
             }
@@ -311,6 +314,7 @@ public:
         int contagem = 0;
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
+                // Usa a matriz 'dist' que armazena custos reais 
                 if (i != j && dist[i][j] != INF) {
                     soma += dist[i][j];
                     contagem++;
@@ -331,6 +335,7 @@ public:
         int diametro = 0;
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
+                // Usa a matriz 'dist' que armazena custos reais
                 if (i != j && dist[i][j] != INF) {
                     diametro = max(diametro, dist[i][j]);
                 }
@@ -404,11 +409,9 @@ public:
         return max_grau;
     }
     
-    /*
-    void calcularCaminhosMinimosComCustos() {  }
-    void construirESalvarSolucaoVM(const string& nomeInstancia, const string& pastaDeSaida) { /* }
-};*/
-}
+    // Função para o algoritmo construtivo(vizinho)
+    void construirESalvarSolucaoVM(const string& nomeInstancia, const string& pastaDeSaida) { }
+};
 
 int main() {
     string nomeInstanciaBase = "BHW1"; 
@@ -422,7 +425,8 @@ int main() {
         Grafo g(caminhoCompletoInstancia);
         
         g.salvarEstatisticas();
-        g.calcularCaminhosMinimos(); 
+        //nova função de cálculo de caminhos mínimos com custos reais
+        g.calcularCaminhosMinimosComCustos(); 
         g.calcularCaminhoMedio();
         g.calcularDiametro();
         g.calcularIntermediacao();
