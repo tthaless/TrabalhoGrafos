@@ -17,6 +17,7 @@ using namespace std;
 
 const int INF = 1e9;
 
+// Estruturas básicas
 struct Servico {
     string id_original;
     int id_numerico_sequencial;
@@ -42,6 +43,7 @@ struct Rota {
     vector<ParadaRota> paradas;
 };
 
+// Função para limpeza de strings
 string limparEspacosGlobal(const string& s) {
     size_t inicio = s.find_first_not_of(" \t\r\n");
     size_t fim = s.find_last_not_of(" \t\r\n");
@@ -92,6 +94,7 @@ private:
     vector<vector<int>> custosDiretos;
     vector<Servico> servicosRequeridos;
 
+    // Algoritmo para encontrar serviço mais próximo
     int encontrarServicoMaisProximo(int localizacaoAtual, int capacidadeAtual) {
         int melhorServicoIdx = -1;
         int menorCustoParaServico = INF;
@@ -152,6 +155,7 @@ private:
     }
 
 public:
+    // Construtor que processa arquivo de entrada
     Grafo(const string& nomeArquivo) {
         int contador_id_servico = 1;
         ifstream arquivo(nomeArquivo);
@@ -352,6 +356,7 @@ public:
         return componentes;
     }
 
+    // Algoritmo Floyd-Warshall para caminhos mínimos
     void calcularCaminhosMinimosComCustos() {
         if (numVertices == 0) return;
         dist.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
@@ -386,6 +391,7 @@ public:
         ofstream resultados("resultados.csv", ios::app);
         long long soma = 0;
         int contagem = 0;
+        // Percorre todos os pares de vértices
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
                 if (i != j && dist[i][j] != INF) {
@@ -394,6 +400,7 @@ public:
                 }
             }
         }
+        // Salva resultado ou mensagem de erro
         if (contagem == 0) {
             resultados << "Caminho medio,Nao ha caminhos entre pares de vertices." << endl;
         } else {
@@ -403,6 +410,7 @@ public:
         resultados.close();
     }
 
+    // Maior caminho mínimo
     void calcularDiametro() {
         ofstream resultados("resultados.csv", ios::app);
         int diametro = 0;
@@ -481,6 +489,7 @@ public:
         return max_grau;
     }
     
+    // Constrói e salva a solução para o problema de roteamento de veículos
     void construirESalvarSolucaoVM(const string& nomeInstancia, const string& pastaDeSaida) {
         if (numVertices == 0 || (noDeposito == 0 && numVertices > 0) ) {
             if (numVertices == 0) cerr << "AVISO: numVertices eh 0 para " << nomeInstancia << ". ";
@@ -488,6 +497,7 @@ public:
             cerr << "Abortando construcao de solucao." << endl;
             return;
         }
+        // Sem serviços requeridos
         if (capacidadeVeiculo <= 0 && !servicosRequeridos.empty()) {
             cerr << "AVISO: Capacidade do veiculo invalida (" << capacidadeVeiculo << ") para " << nomeInstancia << ". Abortando." << endl;
             return;
@@ -534,6 +544,7 @@ public:
 
             bool servicoAdicionadoNestaRota = false;
 
+            // Adiciona serviços à rota enquanto houver capacidade
             while (true) {
                 int proximoServicoIdx = encontrarServicoMaisProximo(localizacaoAtual, cargaAtual);
 
