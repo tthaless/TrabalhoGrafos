@@ -5,7 +5,8 @@
 #include <set>
 #include <string>
 #include <iomanip>
-#include <algorithm> 
+#include <algorithm>
+//#include <x86intrin.h>
 
 using namespace std;
 
@@ -62,8 +63,38 @@ private:
     vector<vector<int>> custosDiretos; 
     vector<Servico> servicosRequeridos; 
 
+    // Função auxiliar para encontrar o próximo serviço mais próximo e viável
+    int encontrarServicoMaisProximo(int localizacaoAtual, int capacidadeAtual) {
+        int melhorServicoIdx = -1;
+        int menorCustoParaServico = INF;
+
+        for (size_t i = 0; i < servicosRequeridos.size(); ++i) {
+            if (!servicosRequeridos[i].atendido) {
+                int noInicioServico = servicosRequeridos[i].u;
+
+                // Validação de índices para acesso à matriz dist
+                if (localizacaoAtual < 0 || localizacaoAtual > numVertices || noInicioServico < 0 || noInicioServico > numVertices) {
+                    continue; // Pula serviço se os nós não são válidos para o cálculo de distância
+                }
+                int custoParaAlcancar = dist[localizacaoAtual][noInicioServico];
+
+                // Verifica se o serviço é alcançável e se a demanda cabe no veículo
+                if (custoParaAlcancar != INF && servicosRequeridos[i].demanda <= capacidadeAtual) {
+                    // Seleciona o serviço com menor custo de acesso. Em caso de igualdade, escolhe o com menor ID numérico.
+                    if (melhorServicoIdx == -1 ||
+                        custoParaAlcancar < menorCustoParaServico ||
+                        (custoParaAlcancar == menorCustoParaServico && servicosRequeridos[i].id_numerico_sequencial < servicosRequeridos[melhorServicoIdx].id_numerico_sequencial)) {
+                        menorCustoParaServico = custoParaAlcancar;
+                        melhorServicoIdx = i;
+                    }
+                }
+            }
+        }
+        return melhorServicoIdx;
+    }
+
 public:
-    // Construtor do grafo que lê os dados do arquivo da instância
+    // Construtor do grafo que lê os dados do arquivo da instância.
     Grafo(const string& nomeArquivo) {
         int contador_id_servico = 1; 
         ifstream arquivo(nomeArquivo);
@@ -73,7 +104,7 @@ public:
         string linha;
         string secaoAtual = "";
         
-        // Lê todas as linhas do arquivo para processamento posterior
+        // Lê todas as linhas do arquivo para processamento posterior.
         vector<string> bufferLinhas;
         while (getline(arquivo, linha)) {
             bufferLinhas.push_back(linha);
@@ -276,12 +307,12 @@ public:
 
     // Calcula caminhos mínimos usando os custos reais das arestas/arcos
     void calcularCaminhosMinimosComCustos() {
-        if (numVertices == 0) return; // Não faz nada se não há vértices
+        if (numVertices == 0) return;
         dist.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
         pred.assign(numVertices + 1, vector<int>(numVertices + 1, -1));
 
         // Inicializa distâncias diretas a partir da matriz de custosDiretos
-        for (int i = 0; i <= numVertices; ++i) { // Iterar de 0 a numVertices para incluir o depósito se for 0
+        for (int i = 0; i <= numVertices; ++i) { 
             for (int j = 0; j <= numVertices; ++j) {
                 if (i == j) {
                     dist[i][j] = 0;
@@ -294,12 +325,11 @@ public:
         }
 
         // Algoritmo de Floyd-Warshall
-        for (int k = 0; k <= numVertices; ++k) { // Nó intermediário
-            for (int i = 0; i <= numVertices; ++i) { // Nó de origem
-                for (int j = 0; j <= numVertices; ++j) { // Nó de destino
-                    // Verifica se os caminhos parciais não são INF para evitar overflow e garantir que a soma é válida
+        for (int k = 0; k <= numVertices; ++k) { 
+            for (int i = 0; i <= numVertices; ++i) { 
+                for (int j = 0; j <= numVertices; ++j) { 
                     if (dist[i][k] != INF && dist[k][j] != INF &&
-                        (static_cast<long long>(dist[i][k]) + dist[k][j] < dist[i][j])) { // long long pra evitar overflow na soma
+                        (static_cast<long long>(dist[i][k]) + dist[k][j] < dist[i][j])) {
                         dist[i][j] = dist[i][k] + dist[k][j];
                         pred[i][j] = pred[k][j]; 
                     }
@@ -314,7 +344,6 @@ public:
         int contagem = 0;
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
-                // Usa a matriz 'dist' que armazena custos reais 
                 if (i != j && dist[i][j] != INF) {
                     soma += dist[i][j];
                     contagem++;
@@ -335,7 +364,6 @@ public:
         int diametro = 0;
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
-                // Usa a matriz 'dist' que armazena custos reais
                 if (i != j && dist[i][j] != INF) {
                     diametro = max(diametro, dist[i][j]);
                 }
@@ -409,8 +437,170 @@ public:
         return max_grau;
     }
     
-    // Função para o algoritmo construtivo(vizinho)
-    void construirESalvarSolucaoVM(const string& nomeInstancia, const string& pastaDeSaida) { }
+    // Constrói e salva a solução usando a heurística do Vizinho Mais Próximo
+    void construirESalvarSolucaoVM(const string& nomeInstancia, const string& pastaDeSaida) {
+        // Valida parâmetros essenciais para a construção da solução
+        if (numVertices == 0 || (noDeposito == 0 && numVertices > 0) ) {
+            if (numVertices == 0) cerr << "AVISO: numVertices eh 0 para " << nomeInstancia << ". ";
+            if (noDeposito == 0 && numVertices > 0) cerr << "AVISO: noDeposito eh 0 para " << nomeInstancia << ". ";
+            cerr << "Abortando construcao de solucao." << endl;
+            return;
+        }
+        if (capacidadeVeiculo <= 0 && !servicosRequeridos.empty()) {
+            cerr << "AVISO: Capacidade do veiculo invalida (" << capacidadeVeiculo << ") para " << nomeInstancia << ". Abortando." << endl;
+            return;
+        }
+
+        // Calcula os caminhos mínimos com custos reais antes de iniciar a construção das rotas
+        calcularCaminhosMinimosComCustos(); 
+
+        // Trata o caso de instâncias sem serviços requeridos
+        if (servicosRequeridos.empty()) {
+            string nomeArquivoSaida = pastaDeSaida + "sol-" + nomeInstancia + ".dat";
+            ofstream arquivoSaida(nomeArquivoSaida);
+            if (arquivoSaida.is_open()) {
+                arquivoSaida << "0" << endl; // Custo total da solução
+                arquivoSaida << "0" << endl; // Número de rotas
+                arquivoSaida << "0" << endl; // Clock 1 (tempo de execução)
+                arquivoSaida << "0" << endl; // Clock 2 (referência)
+                arquivoSaida.close();
+            } else {
+                cerr << "Erro ao criar o arquivo de saida para solucao vazia: " << nomeArquivoSaida << endl;
+            }
+            return;
+        }
+
+        vector<Rota> todasAsRotas;
+        int servicosAtendidos = 0;
+        int totalServicos = servicosRequeridos.size();
+
+        // Reinicializa o estado de "atendido" para todos os serviços
+        for(auto& s : servicosRequeridos) {
+            s.atendido = false;
+        }
+
+        int contadorIdRota = 1;
+        int custoTotalSolucao = 0;
+
+        // Loop principal: continua criando rotas até que todos os serviços sejam atendidos
+        while (servicosAtendidos < totalServicos) {
+            Rota rotaAtual;
+            rotaAtual.id_rota = contadorIdRota;
+
+            int cargaAtual = capacidadeVeiculo;
+            int localizacaoAtual = noDeposito;
+            rotaAtual.paradas.push_back({'D', "0", noDeposito, noDeposito}); // Adiciona a partida do depósito
+
+            bool servicoAdicionadoNestaRota = false; // Flag para verificar se um serviço foi adicionado nesta rota
+
+            // Loop interno: constrói a rota atual
+            while (true) {
+                int proximoServicoIdx = encontrarServicoMaisProximo(localizacaoAtual, cargaAtual);
+
+                if (proximoServicoIdx == -1) {
+                    // Nenhum serviço viável encontrado para a rota atual ou todos os serviços já foram atendidos
+                    break;
+                }
+
+                Servico& servico = servicosRequeridos[proximoServicoIdx];
+
+                // Calcula o custo para alcançar o início do próximo serviço
+                int custoParaAlcancarInicioServico = INF;
+                if (localizacaoAtual >=0 && localizacaoAtual <=numVertices && servico.u >=0 && servico.u <=numVertices){
+                    custoParaAlcancarInicioServico = dist[localizacaoAtual][servico.u];
+                }
+
+                // Se o serviço não pode ser alcançado, marca como atendido para evitar loop infinito
+                // e tenta encontrar outro serviço. Isso pode acontecer se não houver caminho.
+                if (custoParaAlcancarInicioServico == INF) {
+                    servico.atendido = true; // Marca como atendido (não pode ser alcançado)
+                    servicosAtendidos++;
+                    // Se não há mais serviços para atender e nenhum serviço foi adicionado nesta rota, pode sair
+                    if (servicosAtendidos >= totalServicos && !servicoAdicionadoNestaRota) {
+                        break; // Sai do loop da rota e do loop principal
+                    }
+                    continue; // Tenta encontrar outro serviço para a rota atual
+                }
+
+                // Adiciona os custos e demanda do serviço à rota
+                rotaAtual.custo_total += custoParaAlcancarInicioServico;
+                rotaAtual.custo_total += servico.custo_percurso;
+                rotaAtual.custo_total += servico.custo_servico;
+                rotaAtual.demanda_total += servico.demanda;
+                cargaAtual -= servico.demanda;
+                
+                // Marca o serviço como atendido e atualiza a localização atual
+                servico.atendido = true;
+                servicosAtendidos++;
+                localizacaoAtual = servico.v; 
+                servicoAdicionadoNestaRota = true;
+                
+                // Adiciona a parada do serviço à rota
+                rotaAtual.paradas.push_back({'S', to_string(servico.id_numerico_sequencial), servico.u, servico.v});
+
+                // Condição de parada se todos os serviços foram atendidos
+                if (servicosAtendidos >= totalServicos) break;
+                // Prevenção de loop infinito em rotas muito longas
+                if (rotaAtual.paradas.size() > static_cast<size_t>(totalServicos) + 20) {
+                    break; 
+                }
+            }
+
+            // Após construir a rota, verifica se algum serviço foi adicionado.
+            // Se sim, retorna ao depósito e salva a rota.
+            if (servicoAdicionadoNestaRota) {
+                int custoParaRetornarAoDeposito = (localizacaoAtual >=0 && localizacaoAtual <=numVertices && noDeposito >=0 && noDeposito <=numVertices) ? dist[localizacaoAtual][noDeposito] : INF;
+                if (custoParaRetornarAoDeposito == INF) {
+                    rotaAtual.custo_total += INF / 2; // Penalidade por não conseguir voltar ao depósito
+                } else {
+                    rotaAtual.custo_total += custoParaRetornarAoDeposito;
+                }
+                rotaAtual.paradas.push_back({'D', "0", noDeposito, noDeposito}); // Adiciona o retorno ao depósito
+                todasAsRotas.push_back(rotaAtual); 
+                custoTotalSolucao += rotaAtual.custo_total; // Acumula o custo total da solução
+                contadorIdRota++; // Incrementa o ID para a próxima rota
+            } else if (servicosAtendidos < totalServicos) {
+                break; 
+            }
+
+            // Condição de parada para evitar muitas rotas (pode indicar problema)
+            if (contadorIdRota > totalServicos + 5 && totalServicos > 0) {
+                break; 
+            }
+        }
+
+        // Prepara para salvar a solução no arquivo
+        string nomeArquivoSaida = pastaDeSaida + "sol-" + nomeInstancia + ".dat";
+        ofstream arquivoSaida(nomeArquivoSaida);
+
+        if (!arquivoSaida.is_open()) {
+            cerr << "Erro ao criar o arquivo de saida: " << nomeArquivoSaida << endl;
+            return;
+        }
+
+        // Escreve os dados da solução no formato esperado
+        arquivoSaida << custoTotalSolucao << endl;
+        arquivoSaida << todasAsRotas.size() << endl;
+        arquivoSaida << "0" << endl; // tempo de execução
+        arquivoSaida << "0" << endl; //tempo de referência
+
+        // Escreve cada rota
+        for (const auto& rota : todasAsRotas) {
+            arquivoSaida << 0 << " 1 " // Depósito 0 (fixo), Dia 1 (fixo)
+                         << rota.id_rota << " "
+                         << rota.demanda_total << " "
+                         << rota.custo_total << " "
+                         << rota.paradas.size();
+            for (const auto& parada : rota.paradas) {
+                arquivoSaida << " (" << parada.tipo_parada << " "
+                             << parada.id_servico << ","
+                             << parada.u << ","
+                             << parada.v << ")";
+            }
+            arquivoSaida << endl;
+        }
+        arquivoSaida.close();
+    }
 };
 
 int main() {
@@ -425,11 +615,13 @@ int main() {
         Grafo g(caminhoCompletoInstancia);
         
         g.salvarEstatisticas();
-        //nova função de cálculo de caminhos mínimos com custos reais
         g.calcularCaminhosMinimosComCustos(); 
         g.calcularCaminhoMedio();
         g.calcularDiametro();
         g.calcularIntermediacao();
+
+        // Chama a função de construção e salvamento da solução
+        g.construirESalvarSolucaoVM(nomeInstanciaBase, pastaDeSaidaParaSolucoes);
 
     } catch (const std::exception& e) {
         cerr << "ERRO CRITICO ao processar instancia " << nomeInstanciaBase << ": " << e.what() << endl;
