@@ -5,111 +5,209 @@
 #include <set>
 #include <string>
 #include <iomanip>
+#include <algorithm> // Para std::min e std::max
+
 using namespace std;
 
 const int INF = 1e9;
 
+// Estrutura para representar um serviço requerido
+struct Servico {
+    string id_original;
+    int id_numerico_sequencial; 
+    enum Tipo { NOH, ARESTA, ARCO } tipo;
+    int u, v; 
+    int demanda;
+    int custo_percurso; 
+    int custo_servico;  
+    bool atendido = false;
+};
+
+// Estrutura para representar uma parada em uma rota
+struct ParadaRota {
+    char tipo_parada;     
+    string id_servico;    
+    int u;                
+    int v;                
+};
+
+// Estrutura para representar uma rota completa
+struct Rota {
+    int id_rota;
+    int demanda_total = 0;
+    int custo_total = 0;
+    vector<ParadaRota> paradas;
+};
+
+// Função para limpar espaços em uma string
+string limparEspacosGlobal(const string& s) {
+    size_t inicio = s.find_first_not_of(" \t\r\n");
+    size_t fim = s.find_last_not_of(" \t\r\n");
+    return (inicio == string::npos || fim == string::npos) ? "" : s.substr(inicio, fim - inicio + 1);
+}
+
 class Grafo {
 private:
     int numVertices = 0;
-    vector<vector<int>> matrizAdj;
+    vector<vector<int>> matrizAdj; 
     set<int> verticesRequeridos;
-    vector<pair<int, int>> arestas;
-    vector<pair<int, int>> arcos;
-    set<pair<int, int>> arestasRequeridas;
-    set<pair<int, int>> arcosRequeridos;
-    vector<vector<int>> dist;
-    vector<vector<int>> pred;
+    set<pair<int, int>> arestasRequeridasOriginal;
+    set<pair<int, int>> arcosRequeridosOriginal;
 
-    string limparEspacos(const string& s) {
-        size_t inicio = s.find_first_not_of(" \t\r");
-        size_t fim = s.find_last_not_of(" \t\r");
-        return (inicio == string::npos || fim == string::npos) ? "" : s.substr(inicio, fim - inicio + 1);
-    }
+    vector<vector<int>> dist; 
+    vector<vector<int>> pred; 
+
+    int capacidadeVeiculo = 0;   
+    int noDeposito = 0;          
+    vector<vector<int>> custosDiretos; 
+    vector<Servico> servicosRequeridos; 
 
 public:
+    // Construtor do grafo que lê os dados do arquivo da instância
     Grafo(const string& nomeArquivo) {
+        int contador_id_servico = 1; 
         ifstream arquivo(nomeArquivo);
         if (!arquivo.is_open()) {
-            cerr << "Erro ao abrir o arquivo: " << nomeArquivo << endl;
-            exit(1);
+            throw runtime_error("Falha ao abrir arquivo de instancia no construtor do Grafo: " + nomeArquivo);
         }
         string linha;
+        string secaoAtual = "";
+        
+        // Lê todas as linhas do arquivo para processamento posterior
+        vector<string> bufferLinhas;
         while (getline(arquivo, linha)) {
-            linha = limparEspacos(linha);
-            if (linha.empty()) continue;
-            if (linha.find("#Nodes:") != string::npos) {
-                stringstream ss(linha.substr(8)); // Pula "#Nodes:"
-                ss >> numVertices;
-                matrizAdj.assign(numVertices + 1, vector<int>(numVertices + 1, 0));
-            } else if (linha.find("ReN.") != string::npos) {
-                while (getline(arquivo, linha)) {
-                    linha = limparEspacos(linha);
-                    if (linha.empty() || linha[0] != 'N') break;
-                    int v;
-                    sscanf(linha.c_str(), "N%d", &v);
-                    verticesRequeridos.insert(v);
+            bufferLinhas.push_back(linha);
+        }
+        arquivo.close();
+
+        for(const string& linhaOriginal : bufferLinhas){
+            string linhaProcessada = limparEspacosGlobal(linhaOriginal);
+            if (linhaProcessada.empty() || linhaProcessada[0] == '%') continue;
+
+            // Processa cabeçalhos da instância
+            if (linhaProcessada.find("Capacity:") != string::npos) {
+                sscanf(linhaProcessada.c_str(), "Capacity: %d", &capacidadeVeiculo);
+            } else if (linhaProcessada.find("Depot Node:") != string::npos) {
+                sscanf(linhaProcessada.c_str(), "Depot Node: %d", &noDeposito);
+            } else if (linhaProcessada.find("#Nodes:") != string::npos) {
+                sscanf(linhaProcessada.c_str(), "#Nodes: %d", &numVertices);
+                if (numVertices > 0) {
+                    custosDiretos.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
+                    for(int i = 0; i <= numVertices; ++i) custosDiretos[i][i] = 0; 
+                    matrizAdj.assign(numVertices + 1, vector<int>(numVertices + 1, 0));
+                } else {
+                    cerr << "Erro: Numero de vertices invalido (" << numVertices << ") no arquivo " << nomeArquivo << endl;
+                    throw runtime_error("Numero de vertices invalido.");
                 }
-            } else if (linha.find("ReE.") != string::npos) {
-                while (getline(arquivo, linha)) {
-                    linha = limparEspacos(linha);
-                    if (linha.empty() || linha[0] != 'E') break;
-                    int id, from, to;
-                    sscanf(linha.c_str(), "E%d %d %d", &id, &from, &to);
-                    if (from >= 1 && from <= numVertices && to >= 1 && to <= numVertices) {
-                        arestas.push_back({from, to});
-                        arestasRequeridas.insert({from, to});
-                        arestasRequeridas.insert({to, from});
-                        matrizAdj[from][to] = 2; // Aresta requerida
-                        matrizAdj[to][from] = 2;
-                    } else {
-                        cerr << "Aresta requerida ignorada por ter vértices inválidos: " << from << " -> " << to << endl;
+            }
+
+            // Identifica seções de dados
+            else if (linhaProcessada.find("ReN.") != string::npos) { secaoAtual = "ReN"; continue; }
+            else if (linhaProcessada.find("ReE.") != string::npos) { secaoAtual = "ReE"; continue; }
+            else if (linhaProcessada.find("ReA.") != string::npos) { secaoAtual = "ReA"; continue; }
+            else if (linhaProcessada.find("EDGE") != string::npos) { secaoAtual = "EDGE"; continue; }
+            else if (linhaProcessada.find("ARC") != string::npos) { secaoAtual = "ARC"; continue; }
+            else if (linhaProcessada.find("END") != string::npos) { break; }
+
+            // Valida leitura de #Nodes antes das seções
+            if (numVertices == 0 && (secaoAtual == "ReN" || secaoAtual == "ReE" || secaoAtual == "ReA" || secaoAtual == "EDGE" || secaoAtual == "ARC")) {
+                cerr << "Erro: Dados de secao encontrados antes de #Nodes ser definido para " << nomeArquivo << endl;
+                throw runtime_error("Dados de secao encontrados antes de #Nodes.");
+            }
+
+            // Lê dados de serviços requeridos (Nós)
+            if (secaoAtual == "ReN" && linhaProcessada.rfind("N", 0) == 0) {
+                char id_str[20];
+                int demanda_val, custo_s_val;
+                if (sscanf(linhaProcessada.c_str(), "%s %d %d", id_str, &demanda_val, &custo_s_val) == 3) {
+                    int no_num = atoi(id_str + 1); 
+                    Servico s;
+                    s.id_original = id_str;
+                    s.id_numerico_sequencial = no_num; // Usa o número do nó como ID do serviço
+                    s.tipo = Servico::NOH;
+                    s.u = no_num; s.v = no_num; 
+                    s.demanda = demanda_val;
+                    s.custo_percurso = 0; 
+                    s.custo_servico = custo_s_val;
+                    servicosRequeridos.push_back(s);
+                    if(no_num > 0 && no_num <= numVertices) {
+                       verticesRequeridos.insert(no_num);
+                       matrizAdj[no_num][no_num] = 3; 
                     }
                 }
-            } else if (linha.find("ReA.") != string::npos) {
-                while (getline(arquivo, linha)) {
-                    linha = limparEspacos(linha);
-                    if (linha.empty() || linha[0] != 'A') break;
-                    int id, from, to;
-                    sscanf(linha.c_str(), "A%d %d %d", &id, &from, &to);
-                    if (from >= 1 && from <= numVertices && to >= 1 && to <= numVertices) {
-                        arcos.push_back({from, to});
-                        arcosRequeridos.insert({from, to});
-                        matrizAdj[from][to] = 1; // Arco requerido
-                    } else {
-                        cerr << "Arco requerido ignorado por ter vértices inválidos: " << from << " -> " << to << endl;
+            }
+            // Lê dados de serviços requeridos (Arestas)
+            else if (secaoAtual == "ReE" && linhaProcessada.rfind("E", 0) == 0) {
+                char id_str[20];
+                int u_val, v_val, custo_t_val, demanda_val, custo_s_val;
+                if (sscanf(linhaProcessada.c_str(), "%s %d %d %d %d %d", id_str, &u_val, &v_val, &custo_t_val, &demanda_val, &custo_s_val) == 6) {
+                    int edge_num = atoi(id_str + 1); 
+                    Servico s;
+                    s.id_original = id_str;
+                    s.id_numerico_sequencial = edge_num; 
+                    s.tipo = Servico::ARESTA;
+                    s.u = u_val; s.v = v_val;
+                    s.demanda = demanda_val;
+                    s.custo_percurso = custo_t_val;
+                    s.custo_servico = custo_s_val;
+                    servicosRequeridos.push_back(s);
+                    if (u_val > 0 && u_val <= numVertices && v_val > 0 && v_val <= numVertices) {
+                        custosDiretos[u_val][v_val] = min(custosDiretos[u_val][v_val], custo_t_val);
+                        custosDiretos[v_val][u_val] = min(custosDiretos[v_val][u_val], custo_t_val);
+                        matrizAdj[u_val][v_val] = 2; 
+                        matrizAdj[v_val][u_val] = 2; 
+                        arestasRequeridasOriginal.insert({min(u_val, v_val), max(u_val,v_val)});
                     }
                 }
-            } else if (linha.find("EDGE") != string::npos) {
-                while (getline(arquivo, linha)) {
-                    linha = limparEspacos(linha);
-                    if (linha.empty() || linha.substr(0, 3) != "NrE") break;
-                    int id, from, to, custoTotal;
-                    sscanf(linha.c_str(), "NrE%d %d %d %d", &id, &from, &to, &custoTotal);
-                    if (from >= 1 && from <= numVertices && to >= 1 && to <= numVertices) {
-                        matrizAdj[from][to] = 2; // Aresta opcional
-                        matrizAdj[to][from] = 2;
-                    } else {
-                        cerr << "Aresta opcional ignorada por ter vértices inválidos: " << from << " -> " << to << endl;
+            }
+            // Lê dados de serviços requeridos (Arcos)
+            else if (secaoAtual == "ReA" && linhaProcessada.rfind("A", 0) == 0) {
+                char id_str[20];
+                int u_val, v_val, custo_t_val, demanda_val, custo_s_val;
+                if (sscanf(linhaProcessada.c_str(), "%s %d %d %d %d %d", id_str, &u_val, &v_val, &custo_t_val, &demanda_val, &custo_s_val) == 6) {
+                    int arc_num = atoi(id_str + 1); 
+                    Servico s;
+                    s.id_original = id_str;
+                    s.id_numerico_sequencial = arc_num; 
+                    s.tipo = Servico::ARCO;
+                    s.u = u_val; s.v = v_val;
+                    s.demanda = demanda_val;
+                    s.custo_percurso = custo_t_val;
+                    s.custo_servico = custo_s_val;
+                    servicosRequeridos.push_back(s);
+                    if (u_val > 0 && u_val <= numVertices && v_val > 0 && v_val <= numVertices) {
+                        custosDiretos[u_val][v_val] = min(custosDiretos[u_val][v_val], custo_t_val);
+                        matrizAdj[u_val][v_val] = 1; 
+                        arcosRequeridosOriginal.insert({u_val,v_val});
                     }
                 }
-            } else if (linha.find("ARC") != string::npos) {
-                while (getline(arquivo, linha)) {
-                    linha = limparEspacos(linha);
-                    if (linha.empty() || linha.substr(0, 3) != "NrA") break;
-                    int id, from, to, custoTotal;
-                    sscanf(linha.c_str(), "NrA%d %d %d %d", &id, &from, &to, &custoTotal);
-                    if (from >= 1 && from <= numVertices && to >= 1 && to <= numVertices) {
-                        matrizAdj[from][to] = 1; // Arco opcional
-                    } else {
-                        cerr << "Arco opcional ignorado por ter vértices inválidos: " << from << " -> " << to << endl;
+            }
+            // Lê arestas não requeridas
+            else if (secaoAtual == "EDGE" && linhaProcessada.rfind("NrE", 0) == 0) {
+                int no_de, no_para, custo_val;
+                if (sscanf(linhaProcessada.c_str(), "NrE%*d %d %d %d", &no_de, &no_para, &custo_val) == 3) {
+                    if (no_de > 0 && no_de <= numVertices && no_para > 0 && no_para <= numVertices) {
+                        custosDiretos[no_de][no_para] = min(custosDiretos[no_de][no_para], custo_val);
+                        custosDiretos[no_para][no_de] = min(custosDiretos[no_para][no_de], custo_val);
+                        if (matrizAdj[no_de][no_para] == 0) matrizAdj[no_de][no_para] = 2;
+                        if (matrizAdj[no_para][no_de] == 0) matrizAdj[no_para][no_de] = 2;
+                    }
+                }
+            }
+            // Lê arcos não requeridos
+            else if (secaoAtual == "ARC" && linhaProcessada.rfind("NrA", 0) == 0) {
+                int no_de, no_para, custo_val;
+                if (sscanf(linhaProcessada.c_str(), "NrA%*d %d %d %d", &no_de, &no_para, &custo_val) == 3) {
+                    if (no_de > 0 && no_de <= numVertices && no_para > 0 && no_para <= numVertices) {
+                        custosDiretos[no_de][no_para] = min(custosDiretos[no_de][no_para], custo_val);
+                        if (matrizAdj[no_de][no_para] == 0) matrizAdj[no_de][no_para] = 1;
                     }
                 }
             }
         }
-        arquivo.close();
     }
 
+    // Funções para cálculo de estatísticas do grafo (Etapa 1)
     void salvarEstatisticas() {
         ofstream resultados("resultados.csv");
         resultados << "Metrica,Valor" << endl;
@@ -118,8 +216,8 @@ public:
         resultados << "Numero total de arestas," << contarArestas() << endl;
         resultados << "Numero total de arcos," << contarArcos() << endl;
         resultados << "Numero de vertices requeridos," << verticesRequeridos.size() << endl;
-        resultados << "Numero de arestas requeridas," << arestasRequeridas.size() / 2 << endl;
-        resultados << "Numero de arcos requeridos," << arcosRequeridos.size() << endl;
+        resultados << "Numero de arestas requeridas," << arestasRequeridasOriginal.size() << endl;
+        resultados << "Numero de arcos requeridos," << arcosRequeridosOriginal.size() << endl;
         resultados << "Densidade do grafo," << calcularDensidade() << endl;
         resultados << "Componentes conexos," << contarComponentesConexos() << endl;
         resultados << "Grau minimo," << calcularGrauMinimo() << endl;
@@ -150,7 +248,8 @@ public:
 
     double calcularDensidade() {
         int totalConexoes = contarArestas() * 2 + contarArcos();
-        double maxConexoes = numVertices * (numVertices - 1);
+        double maxConexoes = static_cast<double>(numVertices) * (numVertices - 1);
+        if (maxConexoes == 0) return 0.0;
         return totalConexoes / maxConexoes;
     }
 
@@ -175,31 +274,31 @@ public:
         return componentes;
     }
 
-    void calcularCaminhosMinimos() {
-        const int INF = 1e9;
+    // Calcula caminhos mínimos usando custo unitário 
+    void calcularCaminhosMinimos() { 
         dist.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
         pred.assign(numVertices + 1, vector<int>(numVertices + 1, -1));
 
-        // Inicializa distâncias a partir da matriz de adjacência
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
                 if (i == j) {
                     dist[i][j] = 0;
                     pred[i][j] = i;
-                } else if (matrizAdj[i][j] > 0) {
-                    dist[i][j] = 1;
+                } else if (matrizAdj[i][j] > 0) { 
+                    dist[i][j] = 1; 
                     pred[i][j] = i;
                 }
             }
         }
 
-        // Algoritmo de Floyd-Warshall
         for (int k = 1; k <= numVertices; ++k) {
             for (int i = 1; i <= numVertices; ++i) {
                 for (int j = 1; j <= numVertices; ++j) {
-                    if (dist[i][k] + dist[k][j] < dist[i][j]) {
-                        dist[i][j] = dist[i][k] + dist[k][j];
-                        pred[i][j] = pred[k][j];
+                    if (dist[i][k] != INF && dist[k][j] != INF) {
+                        if (dist[i][k] + dist[k][j] < dist[i][j]) {
+                            dist[i][j] = dist[i][k] + dist[k][j];
+                            pred[i][j] = pred[k][j];
+                        }
                     }
                 }
             }
@@ -208,7 +307,7 @@ public:
 
     void calcularCaminhoMedio() {
         ofstream resultados("resultados.csv", ios::app);
-        int soma = 0;
+        long long soma = 0; 
         int contagem = 0;
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
@@ -219,11 +318,9 @@ public:
             }
         }
         if (contagem == 0) {
-            // cout << "Nao ha caminhos entre pares de vertices." << endl;
             resultados << "Caminho medio,Nao ha caminhos entre pares de vertices." << endl;
         } else {
             double caminhoMedio = static_cast<double>(soma) / contagem;
-            // cout << "Caminho medio: " << fixed << setprecision(2) << caminhoMedio << endl;
             resultados << "Caminho medio," << fixed << setprecision(2) << caminhoMedio << endl;
         }
         resultados.close();
@@ -239,7 +336,6 @@ public:
                 }
             }
         }
-        // cout << "Diametro do grafo: " << diametro << endl;
         resultados << "Diametro do grafo," << diametro << endl;
         resultados.close();
     }
@@ -248,40 +344,33 @@ public:
         ofstream resultados("resultados.csv", ios::app);
         vector<double> intermediacao(numVertices + 1, 0.0);
         
-        // itera sobre todos os pares de vertices (s, t)
         for (int s = 1; s <= numVertices; ++s) {
             for (int t = 1; t <= numVertices; ++t) {
-                if (s != t && dist[s][t] != INF) { // verifica se ha um caminho minimo entre s e t
-                    // reconstroi o caminho de t ate s usando a matriz de predecessores
-                    int atual = t;
-                    vector<int> caminho;
-    
-                    while (atual != -1 && atual != s) {
-                        caminho.push_back(atual);
-                        atual = pred[s][atual];
+                if (s != t && dist[s][t] != INF) {
+                    vector<int> caminho_reverso;
+                    int curr = t;
+                    while (curr != s && curr != -1) {
+                        caminho_reverso.push_back(curr);
+                        curr = pred[s][curr];
                     }
-    
-                    if (atual == s) { // se o caminho foi reconstruido corretamente
-                        caminho.push_back(s); // adiciona o no de origem
-    
-                        // conta os nos intermediarios no caminho
-                        for (size_t i = 1; i < caminho.size() - 1; ++i) {
-                            intermediacao[caminho[i]] += 1.0;
+                    if (curr == s) { 
+                        for (size_t i = 0; i < caminho_reverso.size() -1 ; ++i) { 
+                            if (caminho_reverso[i] != s && caminho_reverso[i] != t) {
+                                intermediacao[caminho_reverso[i]] += 1.0;
+                            }
                         }
                     }
                 }
             }
         }
     
-        // calcula o numero total de pares de vertices conectados
-        double totalPares = (double)(numVertices * (numVertices - 1)) / 2.0;
-    
-        // normaliza os valores de intermediação
-        for (int v = 1; v <= numVertices; ++v) {
-            intermediacao[v] /= totalPares;
+        double totalPares = static_cast<double>(numVertices) * (numVertices - 1);
+        if (totalPares > 0) { 
+            for (int v = 1; v <= numVertices; ++v) {
+                intermediacao[v] /= totalPares;
+            }
         }
     
-        // imprime os resultados no arquivo
         resultados << "Intermediacao dos vertices (normalizada):" << endl;
         for (int v = 1; v <= numVertices; ++v) {
             resultados << "Vertice " << v << "," << fixed << setprecision(4) << intermediacao[v] << endl;
@@ -291,37 +380,56 @@ public:
 
     int calcularGrauMinimo() {
         int min_grau = INF;
+        if (numVertices == 0) return 0;
         for(int i = 1; i <= numVertices; i++) {
             int grau = 0;
             for(int j = 1; j <= numVertices; j++) {
-                if(matrizAdj[i][j] != 0) grau++;
+                if(matrizAdj[i][j] != 0 || matrizAdj[j][i] != 0) grau++;
             }
-            min_grau = min(min_grau, grau);
+            if (grau < min_grau) min_grau = grau;
         }
         return min_grau;
     }
     
     int calcularGrauMaximo() {
         int max_grau = 0;
+        if (numVertices == 0) return 0;
         for(int i = 1; i <= numVertices; i++) {
             int grau = 0;
             for(int j = 1; j <= numVertices; j++) {
-                if(matrizAdj[i][j] != 0) grau++;
+                if(matrizAdj[i][j] != 0 || matrizAdj[j][i] != 0) grau++;
             }
-            max_grau = max(max_grau, grau);
+            if (grau > max_grau) max_grau = grau;
         }
         return max_grau;
     }
     
-};
+    /*
+    void calcularCaminhosMinimosComCustos() {  }
+    void construirESalvarSolucaoVM(const string& nomeInstancia, const string& pastaDeSaida) { /* }
+};*/
+}
 
 int main() {
-    Grafo g("Caminho ate a instancia");
+    string nomeInstanciaBase = "BHW1"; 
+    string caminhoCompletoInstancia = "caminho" + nomeInstanciaBase + ".dat";
+    string pastaDeSaidaParaSolucoes = "solucoes_individuais";
 
-    g.salvarEstatisticas();
-    g.calcularCaminhosMinimos();
-    g.calcularCaminhoMedio();
-    g.calcularDiametro();
-    g.calcularIntermediacao();
+    cout << "Processando instancia: " << nomeInstanciaBase << endl;
+    cout << "Arquivo de entrada: " << caminhoCompletoInstancia << endl;
+
+    try {
+        Grafo g(caminhoCompletoInstancia);
+        
+        g.salvarEstatisticas();
+        g.calcularCaminhosMinimos(); 
+        g.calcularCaminhoMedio();
+        g.calcularDiametro();
+        g.calcularIntermediacao();
+
+    } catch (const std::exception& e) {
+        cerr << "ERRO CRITICO ao processar instancia " << nomeInstanciaBase << ": " << e.what() << endl;
+    }
+
     return 0;
 }
