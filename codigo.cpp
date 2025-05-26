@@ -5,34 +5,36 @@
 #include <set>
 #include <string>
 #include <iomanip>
-#include <algorithm> 
-#include <x86intrin.h> // Para a função __rdtsc() para medir ciclos de clock
+#include <algorithm>
+#include <x86intrin.h>
+
+#ifdef _WIN32
+#include <direct.h>
+#else
+#endif
 
 using namespace std;
 
 const int INF = 1e9;
 
-// Estrutura para representar um serviço requerido
 struct Servico {
     string id_original;
-    int id_numerico_sequencial; 
+    int id_numerico_sequencial;
     enum Tipo { NOH, ARESTA, ARCO } tipo;
-    int u, v; 
+    int u, v;
     int demanda;
-    int custo_percurso; 
+    int custo_percurso;
     int custo_servico;  
     bool atendido = false;
 };
 
-// Estrutura para representar uma parada em uma rota
 struct ParadaRota {
-    char tipo_parada;     
+    char tipo_parada;   
     string id_servico;    
-    int u;                
-    int v;                
+    int u;              
+    int v;              
 };
 
-// Estrutura para representar uma rota completa
 struct Rota {
     int id_rota;
     int demanda_total = 0;
@@ -40,30 +42,56 @@ struct Rota {
     vector<ParadaRota> paradas;
 };
 
-// Função para limpar espaços em uma string
 string limparEspacosGlobal(const string& s) {
     size_t inicio = s.find_first_not_of(" \t\r\n");
     size_t fim = s.find_last_not_of(" \t\r\n");
     return (inicio == string::npos || fim == string::npos) ? "" : s.substr(inicio, fim - inicio + 1);
 }
 
+vector<string> lerNomesBaseInstanciasDoCSV(const string& caminhoCSV) {
+    vector<string> nomes;
+    ifstream csvFile(caminhoCSV);
+    string linha;
+
+    if (!csvFile.is_open()) {
+        cerr << "ERRO: Nao foi possivel abrir '" << caminhoCSV << "' para ler nomes de instancias." << endl;
+        return nomes;
+    }
+
+    getline(csvFile, linha);
+
+    while (getline(csvFile, linha)) {
+        stringstream ss(linha);
+        string nomeInstanciaBase;
+        getline(ss, nomeInstanciaBase, ',');
+        if (!nomeInstanciaBase.empty()) {
+            nomes.push_back(limparEspacosGlobal(nomeInstanciaBase));
+        }
+    }
+    csvFile.close();
+    if (nomes.empty()) {
+        cerr << "AVISO: Nenhum nome de instancia lido de '" << caminhoCSV << "'" << endl;
+    }
+    return nomes;
+}
+
+
 class Grafo {
 private:
     int numVertices = 0;
-    vector<vector<int>> matrizAdj; 
+    vector<vector<int>> matrizAdj;
     set<int> verticesRequeridos;
     set<pair<int, int>> arestasRequeridasOriginal;
     set<pair<int, int>> arcosRequeridosOriginal;
 
-    vector<vector<int>> dist; 
-    vector<vector<int>> pred; 
+    vector<vector<int>> dist;
+    vector<vector<int>> pred;
 
-    int capacidadeVeiculo = 0;   
-    int noDeposito = 0;          
-    vector<vector<int>> custosDiretos; 
-    vector<Servico> servicosRequeridos; 
+    int capacidadeVeiculo = 0;  
+    int noDeposito = 0;         
+    vector<vector<int>> custosDiretos;
+    vector<Servico> servicosRequeridos;
 
-    // Função auxiliar para encontrar o próximo serviço mais próximo e viável
     int encontrarServicoMaisProximo(int localizacaoAtual, int capacidadeAtual) {
         int melhorServicoIdx = -1;
         int menorCustoParaServico = INF;
@@ -72,15 +100,12 @@ private:
             if (!servicosRequeridos[i].atendido) {
                 int noInicioServico = servicosRequeridos[i].u;
 
-                // Validação de índices para acesso à matriz dist
                 if (localizacaoAtual < 0 || localizacaoAtual > numVertices || noInicioServico < 0 || noInicioServico > numVertices) {
-                    continue; 
+                    continue;
                 }
                 int custoParaAlcancar = dist[localizacaoAtual][noInicioServico];
 
-                // Verifica se o serviço é alcançável e se a demanda cabe no veículo
                 if (custoParaAlcancar != INF && servicosRequeridos[i].demanda <= capacidadeAtual) {
-                    // Seleciona o serviço com menor custo de acesso. Em caso de empate, escolhe o com menor ID numérico.
                     if (melhorServicoIdx == -1 ||
                         custoParaAlcancar < menorCustoParaServico ||
                         (custoParaAlcancar == menorCustoParaServico && servicosRequeridos[i].id_numerico_sequencial < servicosRequeridos[melhorServicoIdx].id_numerico_sequencial)) {
@@ -93,18 +118,15 @@ private:
         return melhorServicoIdx;
     }
 
-    // Função para ler um valor de tempo de referência de um arquivo CSV
     long long lerClockRefDoCSV(const string& nomeInstanciaBase, int indiceColuna) {
-        // Caminho fixo para o arquivo de referência; pode ser parametrizado no main
-        ifstream csvFile("C:/Users/arien/OneDrive/Documentos/GitHub/TrabalhoGrafos/testeTrab/dados/reference_values.csv");
+        ifstream csvFile("INSIRA O CAMINHO AQUI");
         string linha;
 
         if (!csvFile.is_open()) {
-            // Em caso de falha na abertura, retorna 0 (nenhuma referência disponível)
             return 0;
         }
 
-        getline(csvFile, linha); // Pula a linha de cabeçalho do CSV
+        getline(csvFile, linha);
 
         while (getline(csvFile, linha)) {
             stringstream ss(linha);
@@ -114,13 +136,11 @@ private:
                 campos.push_back(limparEspacosGlobal(campo));
             }
 
-            // Encontra a linha da instância desejada e retorna o valor da coluna específica
             if (campos.size() > static_cast<size_t>(indiceColuna) && campos[0] == nomeInstanciaBase) {
                 csvFile.close();
                 try {
-                    return stoll(campos[indiceColuna]); // Converte a string para long long
+                    return stoll(campos[indiceColuna]);
                 } catch (const std::exception& e) {
-                    // Erro na conversão do valor, imprime mensagem e retorna 0
                     cerr << "Erro ao converter valor do CSV (col " << indiceColuna << ") para " << nomeInstanciaBase
                          << " (valor: '" << campos[indiceColuna] << "'): " << e.what() << endl;
                     return 0;
@@ -128,13 +148,12 @@ private:
             }
         }
         csvFile.close();
-        return 0; // Instância não encontrada no CSV
+        return 0;
     }
 
 public:
-    // Construtor do grafo que lê os dados do arquivo da instância
     Grafo(const string& nomeArquivo) {
-        int contador_id_servico = 1; 
+        int contador_id_servico = 1;
         ifstream arquivo(nomeArquivo);
         if (!arquivo.is_open()) {
             throw runtime_error("Falha ao abrir arquivo de instancia no construtor do Grafo: " + nomeArquivo);
@@ -142,7 +161,6 @@ public:
         string linha;
         string secaoAtual = "";
         
-        // Lê todas as linhas do arquivo para processamento posterior
         vector<string> bufferLinhas;
         while (getline(arquivo, linha)) {
             bufferLinhas.push_back(linha);
@@ -153,7 +171,6 @@ public:
             string linhaProcessada = limparEspacosGlobal(linhaOriginal);
             if (linhaProcessada.empty() || linhaProcessada[0] == '%') continue;
 
-            // Processa cabeçalhos da instância
             if (linhaProcessada.find("Capacity:") != string::npos) {
                 sscanf(linhaProcessada.c_str(), "Capacity: %d", &capacidadeVeiculo);
             } else if (linhaProcessada.find("Depot Node:") != string::npos) {
@@ -162,7 +179,7 @@ public:
                 sscanf(linhaProcessada.c_str(), "#Nodes: %d", &numVertices);
                 if (numVertices > 0) {
                     custosDiretos.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
-                    for(int i = 0; i <= numVertices; ++i) custosDiretos[i][i] = 0; 
+                    for(int i = 0; i <= numVertices; ++i) custosDiretos[i][i] = 0;
                     matrizAdj.assign(numVertices + 1, vector<int>(numVertices + 1, 0));
                 } else {
                     cerr << "Erro: Numero de vertices invalido (" << numVertices << ") no arquivo " << nomeArquivo << endl;
@@ -170,7 +187,6 @@ public:
                 }
             }
 
-            // Identifica seções de dados
             else if (linhaProcessada.find("ReN.") != string::npos) { secaoAtual = "ReN"; continue; }
             else if (linhaProcessada.find("ReE.") != string::npos) { secaoAtual = "ReE"; continue; }
             else if (linhaProcessada.find("ReA.") != string::npos) { secaoAtual = "ReA"; continue; }
@@ -178,42 +194,39 @@ public:
             else if (linhaProcessada.find("ARC") != string::npos) { secaoAtual = "ARC"; continue; }
             else if (linhaProcessada.find("END") != string::npos) { break; }
 
-            // Valida leitura de #Nodes antes das seções
             if (numVertices == 0 && (secaoAtual == "ReN" || secaoAtual == "ReE" || secaoAtual == "ReA" || secaoAtual == "EDGE" || secaoAtual == "ARC")) {
                 cerr << "Erro: Dados de secao encontrados antes de #Nodes ser definido para " << nomeArquivo << endl;
                 throw runtime_error("Dados de secao encontrados antes de #Nodes.");
             }
 
-            // Lê dados de serviços requeridos (Nós)
             if (secaoAtual == "ReN" && linhaProcessada.rfind("N", 0) == 0) {
                 char id_str[20];
                 int demanda_val, custo_s_val;
                 if (sscanf(linhaProcessada.c_str(), "%s %d %d", id_str, &demanda_val, &custo_s_val) == 3) {
-                    int no_num = atoi(id_str + 1); 
+                    int no_num = atoi(id_str + 1);
                     Servico s;
                     s.id_original = id_str;
-                    s.id_numerico_sequencial = no_num; // Usa o número do nó como ID do serviço
+                    s.id_numerico_sequencial = no_num;
                     s.tipo = Servico::NOH;
-                    s.u = no_num; s.v = no_num; 
+                    s.u = no_num; s.v = no_num;
                     s.demanda = demanda_val;
-                    s.custo_percurso = 0; 
+                    s.custo_percurso = 0;
                     s.custo_servico = custo_s_val;
                     servicosRequeridos.push_back(s);
                     if(no_num > 0 && no_num <= numVertices) {
                        verticesRequeridos.insert(no_num);
-                       matrizAdj[no_num][no_num] = 3; 
+                       matrizAdj[no_num][no_num] = 3;
                     }
                 }
             }
-            // Lê dados de serviços requeridos (Arestas)
             else if (secaoAtual == "ReE" && linhaProcessada.rfind("E", 0) == 0) {
                 char id_str[20];
                 int u_val, v_val, custo_t_val, demanda_val, custo_s_val;
                 if (sscanf(linhaProcessada.c_str(), "%s %d %d %d %d %d", id_str, &u_val, &v_val, &custo_t_val, &demanda_val, &custo_s_val) == 6) {
-                    int edge_num = atoi(id_str + 1); 
+                    int edge_num = atoi(id_str + 1);
                     Servico s;
                     s.id_original = id_str;
-                    s.id_numerico_sequencial = edge_num; 
+                    s.id_numerico_sequencial = edge_num;
                     s.tipo = Servico::ARESTA;
                     s.u = u_val; s.v = v_val;
                     s.demanda = demanda_val;
@@ -223,21 +236,20 @@ public:
                     if (u_val > 0 && u_val <= numVertices && v_val > 0 && v_val <= numVertices) {
                         custosDiretos[u_val][v_val] = min(custosDiretos[u_val][v_val], custo_t_val);
                         custosDiretos[v_val][u_val] = min(custosDiretos[v_val][u_val], custo_t_val);
-                        matrizAdj[u_val][v_val] = 2; 
-                        matrizAdj[v_val][u_val] = 2; 
+                        matrizAdj[u_val][v_val] = 2;
+                        matrizAdj[v_val][u_val] = 2;
                         arestasRequeridasOriginal.insert({min(u_val, v_val), max(u_val,v_val)});
                     }
                 }
             }
-            // Lê dados de serviços requeridos (Arcos)
             else if (secaoAtual == "ReA" && linhaProcessada.rfind("A", 0) == 0) {
                 char id_str[20];
                 int u_val, v_val, custo_t_val, demanda_val, custo_s_val;
                 if (sscanf(linhaProcessada.c_str(), "%s %d %d %d %d %d", id_str, &u_val, &v_val, &custo_t_val, &demanda_val, &custo_s_val) == 6) {
-                    int arc_num = atoi(id_str + 1); 
+                    int arc_num = atoi(id_str + 1);
                     Servico s;
                     s.id_original = id_str;
-                    s.id_numerico_sequencial = arc_num; 
+                    s.id_numerico_sequencial = arc_num;
                     s.tipo = Servico::ARCO;
                     s.u = u_val; s.v = v_val;
                     s.demanda = demanda_val;
@@ -246,12 +258,11 @@ public:
                     servicosRequeridos.push_back(s);
                     if (u_val > 0 && u_val <= numVertices && v_val > 0 && v_val <= numVertices) {
                         custosDiretos[u_val][v_val] = min(custosDiretos[u_val][v_val], custo_t_val);
-                        matrizAdj[u_val][v_val] = 1; 
+                        matrizAdj[u_val][v_val] = 1;
                         arcosRequeridosOriginal.insert({u_val,v_val});
                     }
                 }
             }
-            // Lê arestas não requeridas
             else if (secaoAtual == "EDGE" && linhaProcessada.rfind("NrE", 0) == 0) {
                 int no_de, no_para, custo_val;
                 if (sscanf(linhaProcessada.c_str(), "NrE%*d %d %d %d", &no_de, &no_para, &custo_val) == 3) {
@@ -263,7 +274,6 @@ public:
                     }
                 }
             }
-            // Lê arcos não requeridos
             else if (secaoAtual == "ARC" && linhaProcessada.rfind("NrA", 0) == 0) {
                 int no_de, no_para, custo_val;
                 if (sscanf(linhaProcessada.c_str(), "NrA%*d %d %d %d", &no_de, &no_para, &custo_val) == 3) {
@@ -276,7 +286,6 @@ public:
         }
     }
 
-    // Funções para cálculo de estatísticas do grafo (Etapa 1)
     void salvarEstatisticas() {
         ofstream resultados("resultados.csv");
         resultados << "Metrica,Valor" << endl;
@@ -343,33 +352,30 @@ public:
         return componentes;
     }
 
-    // Calcula caminhos mínimos usando os custos reais das arestas/arcos
     void calcularCaminhosMinimosComCustos() {
         if (numVertices == 0) return;
         dist.assign(numVertices + 1, vector<int>(numVertices + 1, INF));
         pred.assign(numVertices + 1, vector<int>(numVertices + 1, -1));
 
-        // Inicializa distâncias diretas a partir da matriz de custosDiretos
-        for (int i = 0; i <= numVertices; ++i) { 
+        for (int i = 0; i <= numVertices; ++i) {
             for (int j = 0; j <= numVertices; ++j) {
                 if (i == j) {
                     dist[i][j] = 0;
                     pred[i][j] = i;
                 } else if (i > 0 && j > 0 && i <= numVertices && j <= numVertices && custosDiretos[i][j] != INF) {
-                    dist[i][j] = custosDiretos[i][j]; 
+                    dist[i][j] = custosDiretos[i][j];
                     pred[i][j] = i;
                 }
             }
         }
 
-        // Algoritmo de Floyd-Warshall
-        for (int k = 0; k <= numVertices; ++k) { 
-            for (int i = 0; i <= numVertices; ++i) { 
-                for (int j = 0; j <= numVertices; ++j) { 
+        for (int k = 0; k <= numVertices; ++k) {
+            for (int i = 0; i <= numVertices; ++i) {
+                for (int j = 0; j <= numVertices; ++j) {
                     if (dist[i][k] != INF && dist[k][j] != INF &&
                         (static_cast<long long>(dist[i][k]) + dist[k][j] < dist[i][j])) {
                         dist[i][j] = dist[i][k] + dist[k][j];
-                        pred[i][j] = pred[k][j]; 
+                        pred[i][j] = pred[k][j];
                     }
                 }
             }
@@ -378,7 +384,7 @@ public:
 
     void calcularCaminhoMedio() {
         ofstream resultados("resultados.csv", ios::app);
-        long long soma = 0; 
+        long long soma = 0;
         int contagem = 0;
         for (int i = 1; i <= numVertices; ++i) {
             for (int j = 1; j <= numVertices; ++j) {
@@ -424,8 +430,8 @@ public:
                         caminho_reverso.push_back(curr);
                         curr = pred[s][curr];
                     }
-                    if (curr == s) { 
-                        for (size_t i = 0; i < caminho_reverso.size() -1 ; ++i) { 
+                    if (curr == s) {
+                        for (size_t i = 0; i < caminho_reverso.size() -1 ; ++i) {
                             if (caminho_reverso[i] != s && caminho_reverso[i] != t) {
                                 intermediacao[caminho_reverso[i]] += 1.0;
                             }
@@ -436,7 +442,7 @@ public:
         }
     
         double totalPares = static_cast<double>(numVertices) * (numVertices - 1);
-        if (totalPares > 0) { 
+        if (totalPares > 0) {
             for (int v = 1; v <= numVertices; ++v) {
                 intermediacao[v] /= totalPares;
             }
@@ -475,9 +481,7 @@ public:
         return max_grau;
     }
     
-    // Constrói e salva a solução usando a heurística do Vizinho Mais Próximo
     void construirESalvarSolucaoVM(const string& nomeInstancia, const string& pastaDeSaida) {
-        // Valida parâmetros essenciais para a construção da solução
         if (numVertices == 0 || (noDeposito == 0 && numVertices > 0) ) {
             if (numVertices == 0) cerr << "AVISO: numVertices eh 0 para " << nomeInstancia << ". ";
             if (noDeposito == 0 && numVertices > 0) cerr << "AVISO: noDeposito eh 0 para " << nomeInstancia << ". ";
@@ -489,22 +493,19 @@ public:
             return;
         }
 
-        // Inicia a medição do tempo de execução do algoritmo
         unsigned long long inicio_total_algoritmo_ciclos = __rdtsc();
 
-        // Calcula os caminhos mínimos com custos reais antes de iniciar a construção das rotas
-        calcularCaminhosMinimosComCustos(); 
+        calcularCaminhosMinimosComCustos();
 
-        // Trata o caso de instâncias sem serviços requeridos
         if (servicosRequeridos.empty()) {
-            string nomeArquivoSaida = pastaDeSaida + "sol-" + nomeInstancia + ".dat";
+            string nomeArquivoSaida = pastaDeSaida + "/sol-" + nomeInstancia + ".dat";
             ofstream arquivoSaida(nomeArquivoSaida);
             if (arquivoSaida.is_open()) {
                 unsigned long long fim_vazio_ciclos = __rdtsc();
-                arquivoSaida << "0" << endl; // Custo total da solução
-                arquivoSaida << "0" << endl; // Número de rotas
-                arquivoSaida << (fim_vazio_ciclos - inicio_total_algoritmo_ciclos) << endl; // Clock 1 (tempo de execução)
-                arquivoSaida << "0" << endl; // Clock 2 (referência)
+                arquivoSaida << "0" << endl;
+                arquivoSaida << "0" << endl;
+                arquivoSaida << (fim_vazio_ciclos - inicio_total_algoritmo_ciclos) << endl;
+                arquivoSaida << "0" << endl;
                 arquivoSaida.close();
             } else {
                 cerr << "Erro ao criar o arquivo de saida para solucao vazia: " << nomeArquivoSaida << endl;
@@ -516,7 +517,6 @@ public:
         int servicosAtendidos = 0;
         int totalServicos = servicosRequeridos.size();
 
-        // Reinicializa o estado de "atendido" para todos os serviços
         for(auto& s : servicosRequeridos) {
             s.atendido = false;
         }
@@ -524,79 +524,64 @@ public:
         int contadorIdRota = 1;
         int custoTotalSolucao = 0;
 
-        // Loop principal: continua criando rotas até que todos os serviços sejam atendidos
         while (servicosAtendidos < totalServicos) {
             Rota rotaAtual;
             rotaAtual.id_rota = contadorIdRota;
 
             int cargaAtual = capacidadeVeiculo;
             int localizacaoAtual = noDeposito;
-            rotaAtual.paradas.push_back({'D', "0", noDeposito, noDeposito}); // Adiciona a partida do depósito
+            rotaAtual.paradas.push_back({'D', "0", noDeposito, noDeposito});
 
-            bool servicoAdicionadoNestaRota = false; // Flag para verificar se um serviço foi adicionado nesta rota
+            bool servicoAdicionadoNestaRota = false;
 
-            // Loop interno: constrói a rota atual
             while (true) {
                 int proximoServicoIdx = encontrarServicoMaisProximo(localizacaoAtual, cargaAtual);
 
                 if (proximoServicoIdx == -1) {
-                    // Nenhum serviço viável encontrado para a rota atual ou todos os serviços já foram atendidos
                     break;
                 }
 
                 Servico& servico = servicosRequeridos[proximoServicoIdx];
 
-                // Calcula o custo para alcançar o início do próximo serviço
                 int custoParaAlcancarInicioServico = INF;
                 if (localizacaoAtual >=0 && localizacaoAtual <=numVertices && servico.u >=0 && servico.u <=numVertices){
                     custoParaAlcancarInicioServico = dist[localizacaoAtual][servico.u];
                 }
 
-                // Se o serviço não pode ser alcançado, marca como atendido para evitar loop infinito
                 if (custoParaAlcancarInicioServico == INF) {
-                    servico.atendido = true; 
+                    servico.atendido = true;
                     servicosAtendidos++;
                     if (servicosAtendidos >= totalServicos && !servicoAdicionadoNestaRota) {
-                        // Usa um 'goto' para sair de múltiplos loops, ou um 'break' com flag
-                        goto fim_loop_principal_vm; 
+                        goto fim_loop_principal_vm;
                     }
-                    continue; 
+                    continue;
                 }
 
-                // Adiciona os custos e demanda do serviço à rota
                 rotaAtual.custo_total += custoParaAlcancarInicioServico;
                 rotaAtual.custo_total += servico.custo_percurso;
                 rotaAtual.custo_total += servico.custo_servico;
                 rotaAtual.demanda_total += servico.demanda;
                 cargaAtual -= servico.demanda;
                 
-                // Marca o serviço como atendido e atualiza a localização atual
                 servico.atendido = true;
                 servicosAtendidos++;
-                localizacaoAtual = servico.v; 
+                localizacaoAtual = servico.v;
                 servicoAdicionadoNestaRota = true;
                 
-                // Adiciona a parada do serviço à rota
                 rotaAtual.paradas.push_back({'S', to_string(servico.id_numerico_sequencial), servico.u, servico.v});
 
-                // Condição de parada se todos os serviços foram atendidos
                 if (servicosAtendidos >= totalServicos) break;
-                // Prevenção de loop infinito em rotas muito longas
                 if (rotaAtual.paradas.size() > static_cast<size_t>(totalServicos) + 20) {
-                    break; 
+                    break;
                 }
             }
 
-            fim_loop_principal_vm:; // Label para o goto
+            fim_loop_principal_vm:;
 
-            // Após construir a rota, verifica se algum serviço foi adicionado.
             if (!servicoAdicionadoNestaRota && servicosAtendidos < totalServicos) {
-                // Se nenhum serviço foi adicionado nesta rota, mas ainda há serviços não atendidos,
-                // verifica se há algum serviço restante que ainda pode ser viável por uma nova rota.
                 bool algumServicoRestanteViavel = false;
                 for(const auto& s_check : servicosRequeridos) {
                     if (!s_check.atendido && s_check.demanda <= capacidadeVeiculo) {
-                        // Verifica se o serviço é alcançável do depósito
                         if (noDeposito >=0 && noDeposito <=numVertices && s_check.u >=0 && s_check.u <=numVertices && dist[noDeposito][s_check.u] != INF) {
                             algumServicoRestanteViavel = true;
                             break;
@@ -604,11 +589,10 @@ public:
                     }
                 }
                 if (!algumServicoRestanteViavel) {
-                    // Se não há mais serviços viáveis, sai do loop principal para evitar loop infinito
-                    break; 
+                    break;
                 }
-                // Se a rota está vazia (apenas com o depósito inicial) e há serviços não atendidos, sai do loop.
-                if (rotaAtual.paradas.size() <= 1) { 
+
+                if (rotaAtual.paradas.size() <= 1) {
                     break;
                 }
             }
@@ -616,33 +600,29 @@ public:
             if (servicoAdicionadoNestaRota) {
                 int custoParaRetornarAoDeposito = (localizacaoAtual >=0 && localizacaoAtual <=numVertices && noDeposito >=0 && noDeposito <=numVertices) ? dist[localizacaoAtual][noDeposito] : INF;
                 if (custoParaRetornarAoDeposito == INF) {
-                    rotaAtual.custo_total += INF / 2; 
+                    rotaAtual.custo_total += INF / 2;
                 } else {
                     rotaAtual.custo_total += custoParaRetornarAoDeposito;
                 }
-                rotaAtual.paradas.push_back({'D', "0", noDeposito, noDeposito}); // Adiciona o retorno ao depósito
-                todasAsRotas.push_back(rotaAtual); 
-                custoTotalSolucao += rotaAtual.custo_total; 
-                contadorIdRota++; // Incrementa o ID para a próxima rota
+                rotaAtual.paradas.push_back({'D', "0", noDeposito, noDeposito});
+                todasAsRotas.push_back(rotaAtual);
+                custoTotalSolucao += rotaAtual.custo_total;
+                contadorIdRota++;
             } else if (servicosAtendidos < totalServicos) {
-                break; 
+                break;
             }
 
-            // Condição de parada de segurança para evitar muitas rotas (pode indicar problema)
             if (contadorIdRota > totalServicos + 5 && totalServicos > 0) {
-                break; 
+                break;
             }
         }
 
-        // Finaliza a medição do tempo de execução do algoritmo
         unsigned long long fim_total_algoritmo_ciclos = __rdtsc();
         unsigned long long ciclos_seu_algoritmo_total = fim_total_algoritmo_ciclos - inicio_total_algoritmo_ciclos;
         
-        // Lê o clock de referência do CSV
-        long long clock_ref_melhor_sol_csv = lerClockRefDoCSV(nomeInstancia, 4); 
+        long long clock_ref_melhor_sol_csv = lerClockRefDoCSV(nomeInstancia, 4);
 
-        // Prepara para salvar a solução no arquivo
-        string nomeArquivoSaida = pastaDeSaida + "sol-" + nomeInstancia + ".dat";
+        string nomeArquivoSaida = pastaDeSaida + "/sol-" + nomeInstancia + ".dat";
         ofstream arquivoSaida(nomeArquivoSaida);
 
         if (!arquivoSaida.is_open()) {
@@ -650,15 +630,13 @@ public:
             return;
         }
 
-        // Escreve os dados da solução no formato esperado
         arquivoSaida << custoTotalSolucao << endl;
         arquivoSaida << todasAsRotas.size() << endl;
-        arquivoSaida << ciclos_seu_algoritmo_total << endl; // Clock 1 (tempo de execução do seu algoritmo)
-        arquivoSaida << clock_ref_melhor_sol_csv << endl;   // Clock 2 (tempo de referência do CSV)
+        arquivoSaida << ciclos_seu_algoritmo_total << endl;
+        arquivoSaida << clock_ref_melhor_sol_csv << endl;  
 
-        // Escreve cada rota
         for (const auto& rota : todasAsRotas) {
-            arquivoSaida << 0 << " 1 " 
+            arquivoSaida << 0 << " 1 "
                          << rota.id_rota << " "
                          << rota.demanda_total << " "
                          << rota.custo_total << " "
@@ -676,8 +654,9 @@ public:
 };
 
 int main() {
-    string nomeInstanciaBase = "BHW1"; 
-    string caminhoCompletoInstancia = "CaminhoDaInstancia" + nomeInstanciaBase + ".dat";
+    // Uso para uma instância de cada vez
+    string nomeInstanciaBase = "INSIRA O NOME DA INSTANCIA";
+    string caminhoCompletoInstancia = "INSIRA O CAMINHO AQUI" + nomeInstanciaBase + ".dat";
     string pastaDeSaidaParaSolucoes = "solucoes_individuais";
 
     cout << "Processando instancia: " << nomeInstanciaBase << endl;
@@ -687,7 +666,7 @@ int main() {
         Grafo g(caminhoCompletoInstancia);
         
         g.salvarEstatisticas();
-        g.calcularCaminhosMinimosComCustos(); 
+        g.calcularCaminhosMinimosComCustos();
         g.calcularCaminhoMedio();
         g.calcularDiametro();
         g.calcularIntermediacao();
@@ -697,6 +676,53 @@ int main() {
     } catch (const std::exception& e) {
         cerr << "ERRO CRITICO ao processar instancia " << nomeInstanciaBase << ": " << e.what() << endl;
     }
+
+    /*
+    // Uso para todas as instâncias de uma vez
+    string caminhoArquivoReferencias = "INSIRA O CAMINHO DO ARQ DE REFERENCIA";
+    string pastaDasInstancias = "INSIRA O CAMINHO DA PASTA COM AS INSTANCIAS";
+    string pastaDeSaidaParaTodasSolucoes = "solucoes"; // Pasta para todas as soluções
+
+    for (const string& nomeInstanciaAtual : nomesDasInstancias) {
+        cout << "\n=============================================" << endl;
+        cout << "Processando instancia: " << nomeInstanciaAtual << endl;
+
+        string arquivoInstanciaCompleto;
+        char ultimoChar = pastaDasInstancias.back();
+        if (ultimoChar != '/' && ultimoChar != '\\') {
+            arquivoInstanciaCompleto = pastaDasInstancias + "/" + nomeInstanciaAtual + ".dat";
+        } else {
+            arquivoInstanciaCompleto = pastaDasInstancias + nomeInstanciaAtual + ".dat";
+        }
+
+        ifstream checkFile(arquivoInstanciaCompleto);
+        if (!checkFile.good()) {
+            cerr << "ERRO: Arquivo de instancia '" << arquivoInstanciaCompleto << "' nao encontrado ou nao pode ser aberto." << endl;
+            cerr << "Pulando esta instancia." << endl;
+            checkFile.close();
+            continue;
+        }
+        checkFile.close();
+
+        try {
+            Grafo g_multi(arquivoInstanciaCompleto);
+            // g_multi.salvarEstatisticas();
+            g_multi.calcularCaminhosMinimosComCustos();
+            // g_multi.calcularCaminhoMedio();
+            // g_multi.calcularDiametro();
+            // g_multi.calcularIntermediacao();
+
+            g_multi.construirESalvarSolucaoVM(nomeInstanciaAtual, pastaDeSaidaParaTodasSolucoes);
+
+        } catch (const std::exception& e) {
+            cerr << "ERRO CRITICO ao processar instancia " << nomeInstanciaAtual << ": " << e.what() << endl;
+            cerr << "Pulando para a proxima instancia." << endl;
+        }
+    }
+
+    cout << "\n\nProcessamento de todas as " << nomesDasInstancias.size() << " instancias concluido." << endl;
+    cout << "Verifique a pasta: " << pastaDeSaidaParaTodasSolucoes << endl;
+    */
 
     return 0;
 }
