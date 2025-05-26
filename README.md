@@ -7,7 +7,7 @@ Este projeto processa grafos a partir de arquivos .dat usando C++ e Python para 
 ```
  📂 projeto/ 
 ├── dados  
-|    └── MCGRP                          # Arquivos .dat para teste
+|    └── MCGRP                          # Arquivos .dat para teste (etapa 2)
 |    |    └── BHW1.dat
 |    |    └── BHW2.dat
 |    |    └── ...
@@ -15,6 +15,7 @@ Este projeto processa grafos a partir de arquivos .dat usando C++ e Python para 
 |    |    └── padrao_escrita.dat
 |    |    └── sol-BHW1.dat
 |    └── reference_values.csv           # CSV com todos os valores de referência
+├── instancias                          # Arquivos .dat para teste (etapa 1)
 ├── output                              # Saída para solucoes, executável e CSV
 |    └── solucoes 
 |    └── solucoes_individuais                              
