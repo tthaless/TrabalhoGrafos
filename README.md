@@ -1,25 +1,37 @@
 # Trabalho Prático de Grafos com C++ e Visualização em Python
 
-Este projeto realiza a leitura, processamento e análise de grafos a partir de arquivos `.dat`, utilizando C++ para o processamento e Python para visualização dos resultados.
+Este projeto processa grafos a partir de arquivos .dat usando C++ e Python para visualização, e desenvolve um algoritmo construtivo para o problema MCGRP que gera rotas viáveis respeitando limites de capacidade e atendendo cada serviço uma única vez.
 
 ## 📁 Estrutura do Projeto
 
 ```
  📂 projeto/ 
-├── instancias # todas as instâncias para testes 
-├── output # Saída para executável e CSV
+├── dados  
+|    └── MCGRP                          # Arquivos .dat para teste
+|    |    └── BHW1.dat
+|    |    └── BHW2.dat
+|    |    └── ...
+|    └── padrao_solucoes                # Arquivos .dat para referência
+|    |    └── padrao_escrita.dat
+|    |    └── sol-BHW1.dat
+|    └── reference_values.csv           # CSV com todos os valores de referência
+├── output                              # Saída para solucoes, executável e CSV
+|    └── solucoes 
+|    └── solucoes_individuais                              
 |    └── codigo.exe 
 |    └── resultados.csv
-├── README.md
-├── codigo.cpp # Código principal em C++
-└── visualizacao.ipynb # Visualização do código principal
+├── codigo.cpp                          # Código principal em C++
+├── visualizacao.ipynb                  # Visualização do código principal
+└── README.md                           # Explicações 
 ```
 
 ---
 
 ## 🧠 Funcionalidades
 
-### 🧩 Parte C++ (`codigo.cpp`)
+### 📍 Etapa 1
+
+#### 🧩 Parte C++ (`codigo.cpp`)
 
 O programa realiza as seguintes operações:
 
@@ -41,9 +53,7 @@ O programa realiza as seguintes operações:
 
 > Todos os dados são salvos no arquivo `resultados.csv`.
 
----
-
-### 📊 Parte Python (`visualizacao.ipynb`)
+#### 📊 Parte Python (`visualizacao.ipynb`)
 
 Este script realiza:
 
@@ -58,22 +68,36 @@ Este script realiza:
   - Caminho médio
   - Diâmetro
 
+### 📍 Etapa 2
+
+- Leitura de arquivos `.dat` com definição de grafos
+- Construção da matriz de adjacência com custos diretos
+- Identificação de vértices, arestas e arcos (requeridos e opcionais)
+- Cálculo de caminhos mínimos com algoritmo de **Floyd-Warshall**
+- Geração de solução inicial usando heurística do **Vizinho Mais Próximo**
+- Controle de capacidade dos veículos e atendimento de todos os serviços
+- Registro do custo total, número de rotas e tempo de execução (ciclos de CPU)
+- Exportação das soluções em arquivos `.dat` e das métricas em CSV
+
 ---
 
 ## 🛠️ Requisitos
 
 ### C++
 
-- Compilador compatível com C++11 ou superior (ex: `g++`)
-- Arquivo de entrada `.dat` formatado corretamente
+- Compilador compatível com C++11 ou superior (ex: `g++`, MSVC).
+- As bibliotecas padrão `iostream`, `fstream`, `sstream`, `vector`, `set`, `string`, `iomanip`, `algorithm` são utilizadas.
+- A biblioteca `<x86intrin.h>` é utilizada para a função `__rdtsc()` para medição de ciclos de CPU. Em sistemas Windows, `direct.h` é incluído.
+- O grupo pode utilizar estruturas de dados da standard library, mas funções diretamente relacionadas a grafos de frameworks como networkx ou igraph não são permitidas[cite: 35, 36].
 
 ### Python
 
-- Python 3.x
-- Bibliotecas:
-```bash
-pip install pandas matplotlib
-```
+- Python 3.x.
+- As bibliotecas `pandas` e `matplotlib` são utilizadas.
+
+## 📖 Referência
+
+- GOLDBARG, Marco; GOLDBARG, Elizabeth; LUNA, Henrique. **Grafos: conceitos, algoritmos e aplicações**. 2. ed. Rio de Janeiro: Elsevier, 2013.
 
 ## 👨‍💻 Autores
 
