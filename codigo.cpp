@@ -5,8 +5,8 @@
 #include <set>
 #include <string>
 #include <iomanip>
-#include <algorithm>
-//#include <x86intrin.h>
+#include <algorithm> 
+#include <x86intrin.h> // Para a função __rdtsc() para medir ciclos de clock
 
 using namespace std;
 
@@ -74,13 +74,13 @@ private:
 
                 // Validação de índices para acesso à matriz dist
                 if (localizacaoAtual < 0 || localizacaoAtual > numVertices || noInicioServico < 0 || noInicioServico > numVertices) {
-                    continue; // Pula serviço se os nós não são válidos para o cálculo de distância
+                    continue; 
                 }
                 int custoParaAlcancar = dist[localizacaoAtual][noInicioServico];
 
                 // Verifica se o serviço é alcançável e se a demanda cabe no veículo
                 if (custoParaAlcancar != INF && servicosRequeridos[i].demanda <= capacidadeAtual) {
-                    // Seleciona o serviço com menor custo de acesso. Em caso de igualdade, escolhe o com menor ID numérico.
+                    // Seleciona o serviço com menor custo de acesso. Em caso de empate, escolhe o com menor ID numérico.
                     if (melhorServicoIdx == -1 ||
                         custoParaAlcancar < menorCustoParaServico ||
                         (custoParaAlcancar == menorCustoParaServico && servicosRequeridos[i].id_numerico_sequencial < servicosRequeridos[melhorServicoIdx].id_numerico_sequencial)) {
@@ -93,8 +93,46 @@ private:
         return melhorServicoIdx;
     }
 
+    // Função para ler um valor de tempo de referência de um arquivo CSV
+    long long lerClockRefDoCSV(const string& nomeInstanciaBase, int indiceColuna) {
+        // Caminho fixo para o arquivo de referência; pode ser parametrizado no main
+        ifstream csvFile("C:/Users/arien/OneDrive/Documentos/GitHub/TrabalhoGrafos/testeTrab/dados/reference_values.csv");
+        string linha;
+
+        if (!csvFile.is_open()) {
+            // Em caso de falha na abertura, retorna 0 (nenhuma referência disponível)
+            return 0;
+        }
+
+        getline(csvFile, linha); // Pula a linha de cabeçalho do CSV
+
+        while (getline(csvFile, linha)) {
+            stringstream ss(linha);
+            string campo;
+            vector<string> campos;
+            while(getline(ss, campo, ',')) {
+                campos.push_back(limparEspacosGlobal(campo));
+            }
+
+            // Encontra a linha da instância desejada e retorna o valor da coluna específica
+            if (campos.size() > static_cast<size_t>(indiceColuna) && campos[0] == nomeInstanciaBase) {
+                csvFile.close();
+                try {
+                    return stoll(campos[indiceColuna]); // Converte a string para long long
+                } catch (const std::exception& e) {
+                    // Erro na conversão do valor, imprime mensagem e retorna 0
+                    cerr << "Erro ao converter valor do CSV (col " << indiceColuna << ") para " << nomeInstanciaBase
+                         << " (valor: '" << campos[indiceColuna] << "'): " << e.what() << endl;
+                    return 0;
+                }
+            }
+        }
+        csvFile.close();
+        return 0; // Instância não encontrada no CSV
+    }
+
 public:
-    // Construtor do grafo que lê os dados do arquivo da instância.
+    // Construtor do grafo que lê os dados do arquivo da instância
     Grafo(const string& nomeArquivo) {
         int contador_id_servico = 1; 
         ifstream arquivo(nomeArquivo);
@@ -104,7 +142,7 @@ public:
         string linha;
         string secaoAtual = "";
         
-        // Lê todas as linhas do arquivo para processamento posterior.
+        // Lê todas as linhas do arquivo para processamento posterior
         vector<string> bufferLinhas;
         while (getline(arquivo, linha)) {
             bufferLinhas.push_back(linha);
@@ -451,6 +489,9 @@ public:
             return;
         }
 
+        // Inicia a medição do tempo de execução do algoritmo
+        unsigned long long inicio_total_algoritmo_ciclos = __rdtsc();
+
         // Calcula os caminhos mínimos com custos reais antes de iniciar a construção das rotas
         calcularCaminhosMinimosComCustos(); 
 
@@ -459,9 +500,10 @@ public:
             string nomeArquivoSaida = pastaDeSaida + "sol-" + nomeInstancia + ".dat";
             ofstream arquivoSaida(nomeArquivoSaida);
             if (arquivoSaida.is_open()) {
+                unsigned long long fim_vazio_ciclos = __rdtsc();
                 arquivoSaida << "0" << endl; // Custo total da solução
                 arquivoSaida << "0" << endl; // Número de rotas
-                arquivoSaida << "0" << endl; // Clock 1 (tempo de execução)
+                arquivoSaida << (fim_vazio_ciclos - inicio_total_algoritmo_ciclos) << endl; // Clock 1 (tempo de execução)
                 arquivoSaida << "0" << endl; // Clock 2 (referência)
                 arquivoSaida.close();
             } else {
@@ -511,15 +553,14 @@ public:
                 }
 
                 // Se o serviço não pode ser alcançado, marca como atendido para evitar loop infinito
-                // e tenta encontrar outro serviço. Isso pode acontecer se não houver caminho.
                 if (custoParaAlcancarInicioServico == INF) {
-                    servico.atendido = true; // Marca como atendido (não pode ser alcançado)
+                    servico.atendido = true; 
                     servicosAtendidos++;
-                    // Se não há mais serviços para atender e nenhum serviço foi adicionado nesta rota, pode sair
                     if (servicosAtendidos >= totalServicos && !servicoAdicionadoNestaRota) {
-                        break; // Sai do loop da rota e do loop principal
+                        // Usa um 'goto' para sair de múltiplos loops, ou um 'break' com flag
+                        goto fim_loop_principal_vm; 
                     }
-                    continue; // Tenta encontrar outro serviço para a rota atual
+                    continue; 
                 }
 
                 // Adiciona os custos e demanda do serviço à rota
@@ -546,28 +587,59 @@ public:
                 }
             }
 
+            fim_loop_principal_vm:; // Label para o goto
+
             // Após construir a rota, verifica se algum serviço foi adicionado.
-            // Se sim, retorna ao depósito e salva a rota.
+            if (!servicoAdicionadoNestaRota && servicosAtendidos < totalServicos) {
+                // Se nenhum serviço foi adicionado nesta rota, mas ainda há serviços não atendidos,
+                // verifica se há algum serviço restante que ainda pode ser viável por uma nova rota.
+                bool algumServicoRestanteViavel = false;
+                for(const auto& s_check : servicosRequeridos) {
+                    if (!s_check.atendido && s_check.demanda <= capacidadeVeiculo) {
+                        // Verifica se o serviço é alcançável do depósito
+                        if (noDeposito >=0 && noDeposito <=numVertices && s_check.u >=0 && s_check.u <=numVertices && dist[noDeposito][s_check.u] != INF) {
+                            algumServicoRestanteViavel = true;
+                            break;
+                        }
+                    }
+                }
+                if (!algumServicoRestanteViavel) {
+                    // Se não há mais serviços viáveis, sai do loop principal para evitar loop infinito
+                    break; 
+                }
+                // Se a rota está vazia (apenas com o depósito inicial) e há serviços não atendidos, sai do loop.
+                if (rotaAtual.paradas.size() <= 1) { 
+                    break;
+                }
+            }
+
             if (servicoAdicionadoNestaRota) {
                 int custoParaRetornarAoDeposito = (localizacaoAtual >=0 && localizacaoAtual <=numVertices && noDeposito >=0 && noDeposito <=numVertices) ? dist[localizacaoAtual][noDeposito] : INF;
                 if (custoParaRetornarAoDeposito == INF) {
-                    rotaAtual.custo_total += INF / 2; // Penalidade por não conseguir voltar ao depósito
+                    rotaAtual.custo_total += INF / 2; 
                 } else {
                     rotaAtual.custo_total += custoParaRetornarAoDeposito;
                 }
                 rotaAtual.paradas.push_back({'D', "0", noDeposito, noDeposito}); // Adiciona o retorno ao depósito
                 todasAsRotas.push_back(rotaAtual); 
-                custoTotalSolucao += rotaAtual.custo_total; // Acumula o custo total da solução
+                custoTotalSolucao += rotaAtual.custo_total; 
                 contadorIdRota++; // Incrementa o ID para a próxima rota
             } else if (servicosAtendidos < totalServicos) {
                 break; 
             }
 
-            // Condição de parada para evitar muitas rotas (pode indicar problema)
+            // Condição de parada de segurança para evitar muitas rotas (pode indicar problema)
             if (contadorIdRota > totalServicos + 5 && totalServicos > 0) {
                 break; 
             }
         }
+
+        // Finaliza a medição do tempo de execução do algoritmo
+        unsigned long long fim_total_algoritmo_ciclos = __rdtsc();
+        unsigned long long ciclos_seu_algoritmo_total = fim_total_algoritmo_ciclos - inicio_total_algoritmo_ciclos;
+        
+        // Lê o clock de referência do CSV
+        long long clock_ref_melhor_sol_csv = lerClockRefDoCSV(nomeInstancia, 4); 
 
         // Prepara para salvar a solução no arquivo
         string nomeArquivoSaida = pastaDeSaida + "sol-" + nomeInstancia + ".dat";
@@ -581,12 +653,12 @@ public:
         // Escreve os dados da solução no formato esperado
         arquivoSaida << custoTotalSolucao << endl;
         arquivoSaida << todasAsRotas.size() << endl;
-        arquivoSaida << "0" << endl; // tempo de execução
-        arquivoSaida << "0" << endl; //tempo de referência
+        arquivoSaida << ciclos_seu_algoritmo_total << endl; // Clock 1 (tempo de execução do seu algoritmo)
+        arquivoSaida << clock_ref_melhor_sol_csv << endl;   // Clock 2 (tempo de referência do CSV)
 
         // Escreve cada rota
         for (const auto& rota : todasAsRotas) {
-            arquivoSaida << 0 << " 1 " // Depósito 0 (fixo), Dia 1 (fixo)
+            arquivoSaida << 0 << " 1 " 
                          << rota.id_rota << " "
                          << rota.demanda_total << " "
                          << rota.custo_total << " "
@@ -605,7 +677,7 @@ public:
 
 int main() {
     string nomeInstanciaBase = "BHW1"; 
-    string caminhoCompletoInstancia = "caminho" + nomeInstanciaBase + ".dat";
+    string caminhoCompletoInstancia = "CaminhoDaInstancia" + nomeInstanciaBase + ".dat";
     string pastaDeSaidaParaSolucoes = "solucoes_individuais";
 
     cout << "Processando instancia: " << nomeInstanciaBase << endl;
@@ -620,7 +692,6 @@ int main() {
         g.calcularDiametro();
         g.calcularIntermediacao();
 
-        // Chama a função de construção e salvamento da solução
         g.construirESalvarSolucaoVM(nomeInstanciaBase, pastaDeSaidaParaSolucoes);
 
     } catch (const std::exception& e) {
