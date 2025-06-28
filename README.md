@@ -84,19 +84,21 @@ Esta etapa foca no desenvolvimento de um algoritmo construtivo para gerar uma so
     - Capacidade máxima dos veículos por rota não é excedida.
     - Cada serviço requerido é atendido por exatamente uma rota.
     - O custo de demanda e serviço de um serviço são contados apenas uma vez, mesmo que a rota passe por ele múltiplas vezes.
-  * **Por que o Vizinho Mais Próximo?** Esta heurística é escolhida por sua simplicidade e rapidez em gerar uma solução inicial, especialmente para instâncias maiores. Embora não seja ótima, ela oferece uma base funcional para otimizações futuras.
 - Registro do custo total da solução, o número de rotas geradas e o tempo de execução (medido em ciclos de CPU).
 - Exportação das soluções geradas em arquivos `.dat` (seguindo o padrão `sol-nome_instancia.dat`) e das métricas de desempenho em formato CSV.
+
+|**Por que o Vizinho Mais Próximo?** Esta heurística é escolhida por sua simplicidade e rapidez em gerar uma solução inicial, especialmente para instâncias maiores. Embora não seja ótima, ela oferece uma base funcional para otimizações futuras.|
 
 ### 📍 Etapa 3: Melhoria da Solução
 
 Nesta etapa, o algoritmo construtivo inicial da Etapa 2 é aprimorado através de um algoritmo de busca local para otimização da solução. As principais funcionalidades são:
 
 - Aplicação da heurística de otimização **2-opt** sobre as rotas geradas na Etapa 2. O 2-opt busca melhorar o custo total da rota através da inversão de segmentos de sub-rotas, visando eliminar cruzamentos e reduzir distâncias percorridas.
-  * **Por que o 2-opt?** O 2-opt é uma técnica eficaz para otimizar rotas existentes. Ela é empregada por sua capacidade de aprimorar significativamente as soluções iniciais (mesmo aquelas geradas por métodos mais diretos) de maneira eficiente, oferecendo um bom equilíbrio entre qualidade da solução e custo computacional.
 - As mesmas restrições de capacidade e atendimento de serviços da Etapa 2 são mantidas.
 - O custo total da solução, o número de rotas e o tempo de execução (ciclos de CPU) são novamente registrados após a aplicação da heurística de melhoria.
 - As soluções melhoradas são exportadas em arquivos `.dat` e as métricas atualizadas em CSV.
+
+|**Por que o 2-opt?** O 2-opt é uma técnica eficaz para otimizar rotas existentes. Ela é empregada por sua capacidade de aprimorar significativamente as soluções iniciais (mesmo aquelas geradas por métodos mais diretos) de maneira eficiente, oferecendo um bom equilíbrio entre qualidade da solução e custo computacional.|
 
 ---
 
