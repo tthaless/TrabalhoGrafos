@@ -37,7 +37,7 @@ Este projeto processa grafos a partir de arquivos .dat usando C++ e Python para 
 
 #### 🧩 Parte C++ (`main.cpp`, `Grafo.h`, `Grafo.cpp`)
 
-O programa C++, modularizado em `main.cpp`, `Grafo.h` e `Grafo.cpp`, realiza as seguintes operações:
+O programa C+ realiza as seguintes operações:
 
 - Leitura de arquivos `.dat` com definição de grafos
 - Construção da matriz de adjacência
