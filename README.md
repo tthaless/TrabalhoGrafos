@@ -25,6 +25,7 @@ Este projeto processa grafos a partir de arquivos .dat usando C++ e Python para 
 ├── README.md
 ├── codigo.cpp                          # Código principal em C++
 └── visualizacao.ipynb                  # Visualização do código principal 
+
 ```
 
 ---
