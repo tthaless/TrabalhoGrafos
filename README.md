@@ -5,28 +5,28 @@ Este projeto processa grafos a partir de arquivos .dat usando C++ e Python para 
 ## 📁 Estrutura do Projeto
 
 ```
-📁 **projeto/**
-├── 📂 **dados/**                       # Contém arquivos de dados para o projeto.
-│   ├── 📂 **MCGRP/**                   # Instâncias de grafos no formato .dat para teste do problema MCGRP (Etapa 2 e 3).
+📁 projeto/
+├── 📂 dados/                       # Contém arquivos de dados para o projeto.
+│   ├── 📂 MCGRP/                   # Instâncias de grafos no formato .dat para teste do problema MCGRP (Etapa 2 e 3).
 │   │   └── BHW1.dat
 │   │   └── BHW2.dat
 │   │   └── ...
-│   ├── 📂 **padrao_solucoes/**         # Soluções de referência para comparação, incluindo o formato de escrita esperado.
+│   ├── 📂 padrao_solucoes/         # Soluções de referência para comparação, incluindo o formato de escrita esperado.
 │   │   └── padrao_escrita.dat
 │   │   └── sol-BHW1.dat
-│   └── 📄 `reference_values.csv`       # Arquivo CSV com valores de referência para diversas instâncias.
-├── 📂 **instancias/**                  # Arquivos .dat para teste (Etapa 1).
-├── 📂 **output/**                      # Diretório para os arquivos de saída gerados pelo programa C++.
-│   ├── 📂 **arquivos.zip/**            # Soluções em formato .zip
-│   ├── 📂 **solucoes_etapa2/**         # Soluções geradas para a Etapa 2.
-│   ├── 📂 **solucoes_etapa3/**         # Soluções geradas para a Etapa 3.
-│   ├── 📄 `codigo.exe`
-│   └── 📄 `resultados.csv`             # Arquivo CSV com as métricas e estatísticas do grafo geradas.
-├── 📄 `README.md`
-├── 📄 `Grafo.cpp`                      # Implementação das classes e funções relacionadas a grafos em C++.
-├── 📄 `Grafo.h`                        # Definição da classe Grafo e estruturas de dados em C++.
-├── 📄 `main.cpp`                       # Ponto de entrada do programa C++, responsável pela execução e coordenação.
-└── 📄 `visualizacao.ipynb`             # Notebook Jupyter para visualização e análise dos resultados em Python. 
+│   └── 📄 reference_values.csv     # Arquivo CSV com valores de referência para diversas instâncias.
+├── 📂 instancias/                  # Arquivos .dat para teste (Etapa 1).
+├── 📂 output/                      # Diretório para os arquivos de saída gerados pelo programa C++.
+│   ├── 📂 arquivos.zip/            # Soluções em formato .zip
+│   ├── 📂 solucoes_etapa2/         # Soluções geradas para a Etapa 2.
+│   ├── 📂 solucoes_etapa3/         # Soluções geradas para a Etapa 3.
+│   ├── 📄 codigo.exe
+│   └── 📄 resultados.csv           # Arquivo CSV com as métricas e estatísticas do grafo geradas.
+├── 📄 README.md
+├── 📄 Grafo.cpp                    # Implementação das classes e funções relacionadas a grafos em C++.
+├── 📄 Grafo.h                      # Definição da classe Grafo e estruturas de dados em C++.
+├── 📄 main.cpp                     # Ponto de entrada do programa C++, responsável pela execução e coordenação.
+└── 📄 visualizacao.ipynb           # Notebook Jupyter para visualização e análise dos resultados em Python. 
 ```
 
 ---
