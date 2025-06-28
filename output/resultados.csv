@@ -1,26 +1,26 @@
 Metrica,Valor
 Numero total de vertices,12
-Numero total de arestas,11
-Numero total de arcos,22
-Numero de vertices requeridos,7
-Numero de arestas requeridas,11
-Numero de arcos requeridos,11
-Densidade do grafo,0.333333
+Numero total de arestas,0
+Numero total de arcos,25
+Numero de vertices requeridos,4
+Numero de arestas requeridas,0
+Numero de arcos requeridos,25
+Densidade do grafo,0.1894
 Componentes conexos,1
-Grau minimo,3
+Grau minimo,2
 Grau maximo,5
-Caminho medio,1.85
-Diametro do grafo,3
+Caminho medio,29.57
+Diametro do grafo,72
 Intermediacao dos vertices (normalizada):
-Vertice 1,0.4545
-Vertice 2,0.2424
-Vertice 3,0.1515
-Vertice 4,0.0000
-Vertice 5,0.3030
-Vertice 6,0.0303
-Vertice 7,0.2121
-Vertice 8,0.0303
-Vertice 9,0.0303
-Vertice 10,0.0606
-Vertice 11,0.1515
-Vertice 12,0.0303
+Vertice 1,0.2500
+Vertice 2,0.1061
+Vertice 3,0.0682
+Vertice 4,0.0227
+Vertice 5,0.1667
+Vertice 6,0.2121
+Vertice 7,0.0076
+Vertice 8,0.0076
+Vertice 9,0.0455
+Vertice 10,0.1212
+Vertice 11,0.0227
+Vertice 12,0.2045
